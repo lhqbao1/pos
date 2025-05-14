@@ -68,7 +68,7 @@ export function AppSidebar() {
                             src="/logo2.png"
                             width={100}
                             height={50}
-                            alt="Picture of the author"
+                            alt="Picture of the authorr"
                             className="object-cover w-2/4"
                         />
                     </SidebarGroupLabel>
