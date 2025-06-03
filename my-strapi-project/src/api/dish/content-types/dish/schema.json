@@ -4,7 +4,7 @@
   "info": {
     "singularName": "dish",
     "pluralName": "dishes",
-    "displayName": "dishes",
+    "displayName": "Dish",
     "description": ""
   },
   "options": {
@@ -33,6 +33,14 @@
     },
     "sold": {
       "type": "integer"
+    },
+    "rating": {
+      "type": "integer"
+    },
+    "category": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::category.category"
     }
   }
 }

@@ -1,0 +1,32 @@
+{
+  "kind": "collectionType",
+  "collectionName": "tables",
+  "info": {
+    "singularName": "table",
+    "pluralName": "tables",
+    "displayName": "Table",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "type": {
+      "type": "enumeration",
+      "enum": [
+        "Normal",
+        "Vip"
+      ]
+    },
+    "table_status": {
+      "type": "enumeration",
+      "enum": [
+        "Empty",
+        "Using"
+      ]
+    },
+    "tableNumber": {
+      "type": "string"
+    }
+  }
+}

@@ -4,7 +4,7 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   transpilePackages: ["geist"],
   images: {
-    domains: ['www.google.com'],
+    domains: ['www.google.com',"encrypted-tbn0.gstatic.com",'localhost'],
   },
   /* config options here */
 };

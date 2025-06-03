@@ -1,14 +1,20 @@
 import React from 'react'
-import { Input } from '../ui/input'
+import { Input } from './ui/input'
 import { Bell, Settings } from 'lucide-react'
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
+import BreadCrumb from './breadcrumb'
 
-const Header = () => {
+interface Header {
+    page: string,
+    breadcrumbList?: string[]
+}
+
+const Header = ({ page, breadcrumbList }: Header) => {
     return (
         <div className='dashboard-header grid grid-cols-4 gap-8 justify-center items-center'>
             <div className='flex flex-col justify-start text-start col-span-2'>
-                <h2 className='text-base font-semibold'>Dashboard</h2>
-                <p className='text-xs text-zinc-700'>Welcome to Dashboard</p>
+                <h2 className='text-lg font-semibold'>{page}</h2>
+                <div className='text-zinc-700'>{!breadcrumbList ? "Welcome to Dashboard" : <BreadCrumb pages={breadcrumbList} />}</div>
             </div>
             <div className='relative'>
                 <button className='absolute right-2' type='submit'>

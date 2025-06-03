@@ -12,30 +12,31 @@ import {
 } from "@/components/ui/sidebar"
 import Image from "next/image"
 import { useState } from "react"
+import { usePathname } from "next/navigation"
 
 // Menu items.
 const items = [
     {
         title: "Trang chủ",
-        url: "#",
+        url: "/",
         icon: Home,
         id: 1
     },
     {
         title: "Thực đơn",
-        url: "#",
+        url: "/menu",
         icon: Utensils,
         id: 2
     },
     {
         title: "Màn hình thu ngân",
-        url: "#",
+        url: "/cashier",
         icon: DollarSign,
         id: 3
     },
     {
         title: "Danh sách đơn hàng",
-        url: "#",
+        url: "/orders",
         icon: ListCheck,
         id: 4
     },
@@ -54,11 +55,8 @@ const items = [
 ]
 
 export function AppSidebar() {
-    const [currentPage, setCurrentPage] = useState(1)
+    const pathname = usePathname()
 
-    const SetCurrentItem = (item) => {
-        setCurrentPage(item.id)
-    }
     return (
         <Sidebar className="">
             <SidebarContent>
@@ -76,9 +74,10 @@ export function AppSidebar() {
                     <SidebarGroupContent>
                         <SidebarMenu>
                             {items.map((item) => {
+                                const isActive = pathname === item.url
                                 return (
                                     <SidebarMenuItem key={item.title}>
-                                        <SidebarMenuButton onClick={() => SetCurrentItem(item)} asChild className={`hover:bg-[#ffeee1] py-5 px-4 ${currentPage === item.id ? 'bg-[#ffeee1] text-orange-500' : ''}`}>
+                                        <SidebarMenuButton asChild isActive={isActive} className={`hover:bg-[#ffeee1] py-5 px-4`}>
                                             {/* 👇 Apply `group` HERE instead of on the SidebarMenuButton */}
                                             <a href={item.url} className="flex flex-row gap-3 text-sm items-center group">
                                                 {/* 👇 Only this item's children respond to its hover */}

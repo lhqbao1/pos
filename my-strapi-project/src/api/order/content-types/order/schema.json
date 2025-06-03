@@ -1,0 +1,37 @@
+{
+  "kind": "collectionType",
+  "collectionName": "orders",
+  "info": {
+    "singularName": "order",
+    "pluralName": "orders",
+    "displayName": "Order",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "table_id": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::table.table"
+    },
+    "order_status": {
+      "type": "enumeration",
+      "enum": [
+        "empty",
+        "active",
+        "paid"
+      ]
+    },
+    "is_paid": {
+      "type": "boolean"
+    },
+    "paid_time": {
+      "type": "datetime"
+    },
+    "total_amount": {
+      "type": "integer"
+    }
+  }
+}
