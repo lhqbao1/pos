@@ -8,25 +8,56 @@
     "description": ""
   },
   "options": {
-    "draftAndPublish": true
+    "draftAndPublish": false
   },
   "attributes": {
+    "tableNumber": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "displayName": {
+      "type": "string"
+    },
     "type": {
       "type": "enumeration",
       "enum": [
         "Normal",
         "Vip"
-      ]
+      ],
+      "default": "Normal"
     },
     "table_status": {
       "type": "enumeration",
       "enum": [
         "Empty",
-        "Using"
-      ]
+        "Using",
+        "Reserved",
+        "Cleaning",
+        "Disabled"
+      ],
+      "default": "Empty"
     },
-    "tableNumber": {
+    "capacity": {
+      "type": "integer",
+      "default": 4,
+      "min": 1
+    },
+    "zone": {
       "type": "string"
+    },
+    "note": {
+      "type": "text"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "orders": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::order.order",
+      "mappedBy": "table_id"
     }
   }
 }

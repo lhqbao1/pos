@@ -8,17 +8,40 @@
     "description": ""
   },
   "options": {
-    "draftAndPublish": true
+    "draftAndPublish": false
   },
   "attributes": {
     "name": {
-      "type": "string"
+      "type": "string",
+      "required": true,
+      "minLength": 2
+    },
+    "slug": {
+      "type": "uid",
+      "targetField": "name",
+      "required": true
+    },
+    "sku": {
+      "type": "string",
+      "unique": true
+    },
+    "description": {
+      "type": "text"
     },
     "price": {
-      "type": "integer"
+      "type": "integer",
+      "required": true,
+      "min": 0
     },
     "vipPrice": {
-      "type": "integer"
+      "type": "integer",
+      "default": 0,
+      "min": 0
+    },
+    "costPrice": {
+      "type": "integer",
+      "default": 0,
+      "min": 0
     },
     "image": {
       "type": "media",
@@ -26,21 +49,40 @@
       "required": false,
       "allowedTypes": [
         "images",
-        "files",
-        "videos",
-        "audios"
+        "files"
       ]
     },
+    "isActive": {
+      "type": "boolean",
+      "default": true
+    },
+    "sortOrder": {
+      "type": "integer",
+      "default": 0,
+      "min": 0
+    },
     "sold": {
-      "type": "integer"
+      "type": "integer",
+      "default": 0,
+      "min": 0
     },
     "rating": {
-      "type": "integer"
+      "type": "decimal",
+      "default": 0,
+      "min": 0,
+      "max": 5
     },
     "category": {
       "type": "relation",
-      "relation": "oneToOne",
-      "target": "api::category.category"
+      "relation": "manyToOne",
+      "target": "api::category.category",
+      "inversedBy": "dishes"
+    },
+    "orderItems": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::order-item.order-item",
+      "mappedBy": "dish_id"
     }
   }
 }
