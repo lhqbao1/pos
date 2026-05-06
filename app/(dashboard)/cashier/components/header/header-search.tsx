@@ -26,7 +26,6 @@ import { useAtom } from 'jotai'
 import { toast } from 'sonner'
 import { useGetTableByTableNumber, useUpdateTableStatus } from '@/features/tables/hook'
 import { useCreateOrder, useGetOrderByTable } from '@/features/order/hook'
-import order from '@/my-strapi-project/src/api/order/controllers/order'
 import { useCreateOrderItem, useGetOrderItemsWithTable, useUpdateOrderItemQuantity } from '@/features/order-items/hook'
 import { OrderItem } from '@/features/order-items/type'
 

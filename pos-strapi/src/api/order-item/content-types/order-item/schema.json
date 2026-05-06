@@ -1,0 +1,67 @@
+{
+  "kind": "collectionType",
+  "collectionName": "order_items",
+  "info": {
+    "singularName": "order-item",
+    "pluralName": "order-items",
+    "displayName": "OrderItem",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "dish_id": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::dish.dish",
+      "inversedBy": "orderItems"
+    },
+    "order_id": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::order.order",
+      "inversedBy": "items"
+    },
+    "quantity": {
+      "type": "integer",
+      "default": 1,
+      "required": true,
+      "min": 1
+    },
+    "price_at_order": {
+      "type": "integer",
+      "required": true,
+      "min": 0
+    },
+    "line_total": {
+      "type": "integer",
+      "default": 0,
+      "min": 0
+    },
+    "discount_amount": {
+      "type": "integer",
+      "default": 0,
+      "min": 0
+    },
+    "dish_name_snapshot": {
+      "type": "string"
+    },
+    "dish_sku_snapshot": {
+      "type": "string"
+    },
+    "note": {
+      "type": "string"
+    },
+    "kitchen_status": {
+      "type": "enumeration",
+      "enum": [
+        "pending",
+        "preparing",
+        "served",
+        "cancelled"
+      ],
+      "default": "pending"
+    }
+  }
+}

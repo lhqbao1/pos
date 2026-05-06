@@ -1,0 +1,63 @@
+{
+  "kind": "collectionType",
+  "collectionName": "payments",
+  "info": {
+    "singularName": "payment",
+    "pluralName": "payments",
+    "displayName": "Payment",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "order_id": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::order.order",
+      "inversedBy": "payments",
+      "required": true
+    },
+    "method": {
+      "type": "enumeration",
+      "enum": [
+        "cash",
+        "card",
+        "bank_transfer",
+        "e_wallet"
+      ],
+      "default": "cash"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": [
+        "pending",
+        "success",
+        "failed",
+        "refunded"
+      ],
+      "default": "success"
+    },
+    "amount": {
+      "type": "integer",
+      "required": true,
+      "min": 0
+    },
+    "currency": {
+      "type": "string",
+      "default": "VND"
+    },
+    "paid_at": {
+      "type": "datetime"
+    },
+    "reference": {
+      "type": "string"
+    },
+    "note": {
+      "type": "text"
+    },
+    "metadata": {
+      "type": "json"
+    }
+  }
+}
