@@ -23,12 +23,22 @@ export const useCreateOrderItem = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-       mutationFn: (data: OrderItem) => createOrderItem({
-        dish_id: data.dish_id,
-        order_id: data.order_id,
-        quantity: data.quantity,
-        price_at_order: data.price_at_order
-       }),
+       mutationFn: (data: OrderItem) => {
+        const dish = typeof data.dish_id === 'string' ? undefined : data.dish_id
+
+        return createOrderItem({
+            dish_id: data.dish_id,
+            order_id: data.order_id,
+            quantity: data.quantity,
+            price_at_order: data.price_at_order,
+            line_total: data.line_total,
+            discount_amount: data.discount_amount ?? 0,
+            dish_name_snapshot: data.dish_name_snapshot ?? dish?.name,
+            dish_sku_snapshot: data.dish_sku_snapshot ?? dish?.sku,
+            note: data.note,
+            kitchen_status: data.kitchen_status ?? 'pending',
+        })
+       },
        onSuccess: () => {
         queryClient.invalidateQueries(['order-items-with-table'])
        }

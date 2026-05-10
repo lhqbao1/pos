@@ -32,8 +32,8 @@ const Analytics = () => {
                             </div>
                         </div>
                         <div className='flex flex-row items-center gap-1 h-full pt-5.5!'>
-                            <div className='bg-primary rounded-full'>
-                                <ArrowUpRight size={12} color='orange' />
+                            <div className='bg-primary rounded-full p-0.5'>
+                                <ArrowUpRight size={12} className='text-secondary' />
                             </div>
                             <p className='text-[10px] text-zinc-400'>1.58%</p>
                         </div>
@@ -51,8 +51,8 @@ const Analytics = () => {
                             </div>
                         </div>
                         <div className='flex flex-row items-center gap-1 h-full pt-5.5!'>
-                            <div className='bg-primary rounded-full'>
-                                <ArrowUpRight size={12} color='orange' />
+                            <div className='bg-primary rounded-full p-0.5'>
+                                <ArrowUpRight size={12} className='text-secondary' />
                             </div>
                             <p className='text-[10px] text-zinc-400'>1.58%</p>
                         </div>
@@ -70,8 +70,8 @@ const Analytics = () => {
                             </div>
                         </div>
                         <div className='flex flex-row items-center gap-1 h-full pt-5.5!'>
-                            <div className='bg-primary rounded-full'>
-                                <ArrowUpRight size={12} color='orange' />
+                            <div className='bg-primary rounded-full p-0.5'>
+                                <ArrowUpRight size={12} className='text-secondary' />
                             </div>
                             <p className='text-[10px] text-zinc-400'>1.58%</p>
                         </div>

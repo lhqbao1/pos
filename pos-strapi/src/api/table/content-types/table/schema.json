@@ -53,6 +53,12 @@
       "type": "boolean",
       "default": true
     },
+    "occupied_since": {
+      "type": "datetime"
+    },
+    "last_cleared_at": {
+      "type": "datetime"
+    },
     "orders": {
       "type": "relation",
       "relation": "oneToMany",

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { getTableByTableNumber, getTables, updateTableStatus } from "./services"
+import { createTable, getTableByTableNumber, getTables, updateTableStatus } from "./services"
+import { TablePayload } from "./type"
 
 export const useGetTables = () => {
     return useQuery({
@@ -8,6 +9,18 @@ export const useGetTables = () => {
             'sort': 'tableNumber:asc',
         })
     })
+}
+
+export const useCreateTable = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (payload: TablePayload) => createTable(payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['tables'] })
+      await queryClient.refetchQueries({ queryKey: ['tables'], type: 'active' })
+    },
+  })
 }
 
 export const useGetTableByTableNumber = (tableNumber?: string) => {
@@ -26,8 +39,9 @@ export const useUpdateTableStatus = () => {
 
   return useMutation({
     mutationFn: updateTableStatus,
-    onSuccess: () => {
-      queryClient.invalidateQueries(['tables']);
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['tables'] });
+      await queryClient.invalidateQueries({ queryKey: ['table'] });
     },
   });
 };

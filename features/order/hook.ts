@@ -58,8 +58,24 @@ export const useUpdateOrderStatus = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async ({id, order_status, is_paid, paid_time, total_amount}: {id: string, order_status: string, is_paid: boolean, paid_time: Date, total_amount: number}) => {
-            return updateOrderStatus(id, order_status, is_paid, paid_time, total_amount);
+        mutationFn: async ({
+            id,
+            order_status,
+            is_paid,
+            paid_time,
+            total_amount,
+            paid_amount,
+            change_amount,
+        }: {
+            id: string,
+            order_status: string,
+            is_paid?: boolean,
+            paid_time?: Date,
+            total_amount?: number,
+            paid_amount?: number,
+            change_amount?: number,
+        }) => {
+            return updateOrderStatus(id, order_status, is_paid, paid_time, total_amount, paid_amount, change_amount);
         },
         onSuccess: () => {
             queryClient.invalidateQueries(['order-table']);

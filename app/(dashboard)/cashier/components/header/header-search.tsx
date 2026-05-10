@@ -1,7 +1,6 @@
 import React from 'react'
 import { AlertCircle, Bell, Settings } from 'lucide-react'
 import BreadCrumb from '@/components/breadcrumb'
-import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Check, ChevronsUpDown } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -38,17 +37,20 @@ interface HeaderSearch {
 const HeaderSearch = ({ page, breadcrumbList }: HeaderSearch) => {
     const [open, setOpen] = React.useState(false)
     const [value, setValue] = React.useState("")
-    const { data: dishes, isLoading: dishesLoading, isError: dishesError } = useDishesQuery()
+    const tableSessionStartRef = React.useRef<Record<string, string>>({})
+    const { data: dishes } = useDishesQuery()
     // Import the atom to get the current table number
     const [currentTable] = useAtom(tableNumberAtom)
     // Fetch current table data
-    const { data: currentTableData, isLoading: tableLoading, isError: tableError } = useGetTableByTableNumber(currentTable)
+    const { data: currentTableData } = useGetTableByTableNumber(currentTable)
+    const currentTableRecord = currentTableData?.data?.[0]
 
     // Activate update table status mutation
     const { mutate: updateTableStatus } = useUpdateTableStatus();
 
     // Fetch order by table document id
-    const { data: orderByTableData, isLoading: orderByTableLoading, isError: orderByTableError } = useGetOrderByTable(currentTableData?.data[0].documentId)
+    const { data: orderByTableData } = useGetOrderByTable(currentTableRecord?.documentId)
+    const orderByTableItems = orderByTableData?.data ?? []
 
     //Activate create order mutation
     const { mutate: createOrder } = useCreateOrder()
@@ -57,10 +59,14 @@ const HeaderSearch = ({ page, breadcrumbList }: HeaderSearch) => {
     const { mutate: createOrderItem } = useCreateOrderItem()
 
     // Fetch order items by table number
-    const { data: orderItemsByTableData, isLoading: orderItemsByTableLoading, isError: orderItemsByTableError } = useGetOrderItemsWithTable(currentTable)
+    const { data: orderItemsByTableData } = useGetOrderItemsWithTable(currentTable)
+    const orderItemsByTable = orderItemsByTableData?.data ?? []
 
     // Activate update order item quantity
     const { mutate: updateOrderItemQuantity } = useUpdateOrderItemQuantity()
+
+    const getOrderItemDocumentId = (item: OrderItem) =>
+        item.documentId ?? (typeof item.id === 'number' ? String(item.id) : '')
 
     const listDishes: Array<{ value: string; label: string; id: string, price: number, vipPrice: number }> = []
 
@@ -79,7 +85,8 @@ const HeaderSearch = ({ page, breadcrumbList }: HeaderSearch) => {
     const chooseDish = (dishName: string, dishId: string, price: number, vipPrice: number) => {
         setValue(dishName);
         setOpen(false);
-        const currentOrderIndex = orderByTableData?.data.length - 1
+        const currentOrderIndex = orderByTableItems.length - 1
+        const currentOrder = currentOrderIndex >= 0 ? orderByTableItems[currentOrderIndex] : undefined
         // Check if a table is selected
         if (!currentTable) {
             toast.error("Vui lòng chọn bàn trước khi chọn món ăn")
@@ -87,32 +94,41 @@ const HeaderSearch = ({ page, breadcrumbList }: HeaderSearch) => {
         }
 
         // Check if the current table data is available
-        if (!currentTableData) {
+        if (!currentTableRecord?.documentId) {
             toast.error("Không tìm thấy bàn với số bàn đã chọn")
             return
         }
 
         // Check if the current table is available for use
-        if (currentTableData.data[0].table_status === "Empty") {
+        if (currentTableRecord.table_status === "Empty") {
+            const sessionStartedAt =
+                currentTableRecord.occupied_since ??
+                tableSessionStartRef.current[currentTableRecord.documentId] ??
+                new Date().toISOString()
+
+            tableSessionStartRef.current[currentTableRecord.documentId] = sessionStartedAt
+
             // Update the table status to "In Use"
             updateTableStatus({
-                table_id: currentTableData.data[0].documentId,
+                table_id: currentTableRecord.documentId,
                 table_status: "Using",
+                occupied_since: sessionStartedAt,
+                last_cleared_at: null,
             });
         }
 
         //Check if the current table has an order or not
-        if (!orderByTableData || orderByTableData.data.length === 0) {
+        if (!currentOrder || currentOrder.order_status === 'paid') {
             // If no order exists, create a new order
             createOrder(
                 {
-                    table_id: currentTableData.data[0].documentId,
+                    table_id: currentTableRecord.documentId,
                     order_status: 'active',
                     is_paid: false,
                 },
                 {
                     onSuccess: (order) => {
-                        const tableName = currentTableData.data[0].tableNumber;
+                        const tableName = currentTableRecord.tableNumber;
                         // Create order item after creating order
                         createOrderItem({
                             dish_id: dishId ?? '',
@@ -131,20 +147,32 @@ const HeaderSearch = ({ page, breadcrumbList }: HeaderSearch) => {
                 }
             )
 
-        } else if (orderByTableData && orderByTableData.data[currentOrderIndex].order_status === 'active') {
+        } else if (currentOrder.order_status === 'active') {
             let isDishExists = false;
             let currentOrderItem = {} as OrderItem;
 
-            for (let i = 0; i < orderItemsByTableData.data.length; i++) {
-                if (orderItemsByTableData.data[i].dish_id.documentId === dishId) {
+            for (let i = 0; i < orderItemsByTable.length; i++) {
+                const orderItemDishId =
+                    typeof orderItemsByTable[i].dish_id === 'string'
+                        ? orderItemsByTable[i].dish_id
+                        : orderItemsByTable[i].dish_id?.documentId
+
+                if (orderItemDishId === dishId) {
                     isDishExists = true;
-                    currentOrderItem = orderItemsByTableData.data[i];
+                    currentOrderItem = orderItemsByTable[i];
                     break;
                 }
             }
             if (isDishExists === true) {
+                const orderItemId = getOrderItemDocumentId(currentOrderItem)
+
+                if (!orderItemId) {
+                    toast.error("Không tìm thấy mã món trong đơn để cập nhật số lượng")
+                    return
+                }
+
                 updateOrderItemQuantity({
-                    id: currentOrderItem?.documentId ?? "",
+                    id: orderItemId,
                     quantity: currentOrderItem?.quantity + 1   // Increase quantity by 1           
                 })
                 toast.success("Cập nhật món thành công", {
@@ -158,12 +186,12 @@ const HeaderSearch = ({ page, breadcrumbList }: HeaderSearch) => {
                 createOrderItem(
                     {
                         dish_id: dishId ?? '',
-                        order_id: orderByTableData.data[currentOrderIndex]?.documentId,
+                        order_id: currentOrder?.documentId,
                         quantity: 1,
-                        price_at_order: currentTableData.data[0].tableNumber.includes('vip') ? (price ?? 0) : (vipPrice ?? 0), // Ensure price is a number, fallback to 0 if undefined
+                        price_at_order: currentTableRecord.tableNumber.includes('vip') ? (price ?? 0) : (vipPrice ?? 0), // Ensure price is a number, fallback to 0 if undefined
                     },
                     {
-                        onSuccess: (data) => {
+                        onSuccess: () => {
                             toast.success("Gọi món thành công", {
                                 description: (
                                     <span className="text-green-500 !text-xs">Bạn đã đặt món thành công</span>  // 👈 Change the color here

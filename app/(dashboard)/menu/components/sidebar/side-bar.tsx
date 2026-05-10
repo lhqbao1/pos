@@ -3,7 +3,6 @@ import React, { } from 'react'
 import { MoreHorizontal } from 'lucide-react'
 import CategoriesFilter from './filter/categories-filter'
 import PriceRange from './filter/price-range'
-import Rating from './filter/rating'
 
 const SideBar = () => {
     return (
@@ -17,8 +16,6 @@ const SideBar = () => {
                     <CategoriesFilter />
                     <hr className='h-1 my-4'></hr>
                     <PriceRange />
-                    <hr className='h-1 my-4'></hr>
-                    <Rating />
                 </div>
             </div>
         </div>

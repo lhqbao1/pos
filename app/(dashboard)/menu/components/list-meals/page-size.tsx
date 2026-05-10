@@ -14,7 +14,7 @@ export function PageSize() {
     return (
 
         <Select value={pageSize.toString()} onValueChange={(val) => setPageSize(Number(val))}>
-            <SelectTrigger>
+            <SelectTrigger className="h-11 min-w-[88px] rounded-2xl border-[#e4d1ba] bg-white px-3 text-sm shadow-sm focus-visible:ring-[#e6c59f]/50">
                 <SelectValue placeholder="Select page size" />
             </SelectTrigger>
             <SelectContent>

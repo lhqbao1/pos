@@ -1,0 +1,48 @@
+<svg width="960" height="640" viewBox="0 0 960 640" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="960" y2="640" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF8EF"/>
+      <stop offset="1" stop-color="#FFE8D1"/>
+    </linearGradient>
+    <linearGradient id="bowl" x1="480" y1="240" x2="480" y2="470" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFB46A"/>
+      <stop offset="1" stop-color="#CC5D12"/>
+    </linearGradient>
+    <linearGradient id="steam" x1="0" y1="0" x2="0" y2="120" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFB272" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#FFB272" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="960" height="640" rx="42" fill="url(#bg)"/>
+
+  <circle cx="175" cy="155" r="72" fill="#FFD9B0" opacity="0.6"/>
+  <circle cx="790" cy="138" r="56" fill="#FFD6AB" opacity="0.5"/>
+  <circle cx="822" cy="520" r="86" fill="#F6C589" opacity="0.4"/>
+  <circle cx="160" cy="525" r="94" fill="#F8C992" opacity="0.35"/>
+
+  <path d="M347 288C347 260 370 237 398 237H562C590 237 613 260 613 288V303C613 395 554 469 480 469C406 469 347 395 347 303V288Z" fill="url(#bowl)"/>
+  <path d="M326 302C326 285 339 272 356 272H604C621 272 634 285 634 302C634 393 566 468 480 468C394 468 326 393 326 302Z" fill="#A54811"/>
+  <path d="M292 289C292 266 310 248 333 248H627C650 248 668 266 668 289C668 398 584 486 480 486C376 486 292 398 292 289Z" fill="url(#bowl)"/>
+
+  <ellipse cx="480" cy="276" rx="171" ry="35" fill="#FFF4E8"/>
+  <ellipse cx="480" cy="286" rx="162" ry="31" fill="#FFE9D3"/>
+
+  <ellipse cx="432" cy="281" rx="32" ry="13" fill="#7ABF6E"/>
+  <ellipse cx="480" cy="287" rx="38" ry="14" fill="#F09B3E"/>
+  <ellipse cx="532" cy="281" rx="34" ry="13" fill="#72B1D8"/>
+  <ellipse cx="388" cy="292" rx="22" ry="10" fill="#D56A3A"/>
+  <ellipse cx="575" cy="292" rx="24" ry="10" fill="#8C5BC9"/>
+
+  <path d="M437 198C423 174 428 151 447 128" stroke="url(#steam)" stroke-width="14" stroke-linecap="round"/>
+  <path d="M482 188C467 164 471 141 492 116" stroke="url(#steam)" stroke-width="14" stroke-linecap="round"/>
+  <path d="M527 198C512 174 516 151 536 129" stroke="url(#steam)" stroke-width="14" stroke-linecap="round"/>
+
+  <rect x="663" y="154" width="16" height="194" rx="8" transform="rotate(27 663 154)" fill="#9C4A18"/>
+  <rect x="701" y="138" width="16" height="196" rx="8" transform="rotate(27 701 138)" fill="#C96A2B"/>
+
+  <path d="M225 500H735" stroke="#E8BB89" stroke-width="10" stroke-linecap="round" opacity="0.55"/>
+  <text x="480" y="560" text-anchor="middle" fill="#A75A26" font-size="40" font-family="Arial, sans-serif" font-weight="700" letter-spacing="2">
+    FOOD CATEGORY
+  </text>
+</svg>

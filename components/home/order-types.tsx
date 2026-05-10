@@ -58,7 +58,7 @@ const OrderTypes = () => {
                         return (
                             <div className='flex flex-row gap-5 items-center' key={index}>
                                 <div className='p-2 bg-primary rounded-lg'>
-                                    <Soup color='orange' size={20} />
+                                    <Soup className='text-secondary' size={20} />
                                 </div>
 
                                 <div className='flex-1'>

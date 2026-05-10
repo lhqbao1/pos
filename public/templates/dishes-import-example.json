@@ -1,0 +1,28 @@
+[
+  {
+    "name": "Bún bò Huế",
+    "price": 45000,
+    "vipPrice": 55000,
+    "costPrice": 28000,
+    "sku": "BBH-001",
+    "category": "Bún",
+    "description": "Bún bò Huế đặc biệt",
+    "rating": 4.6,
+    "sold": 0,
+    "isActive": true,
+    "sortOrder": 1
+  },
+  {
+    "name": "Phở bò tái",
+    "price": 50000,
+    "vipPrice": 60000,
+    "costPrice": 32000,
+    "sku": "PHO-001",
+    "category": "Phở",
+    "description": "Phở bò tái truyền thống",
+    "rating": 4.8,
+    "sold": 0,
+    "isActive": true,
+    "sortOrder": 2
+  }
+]

@@ -1,6 +1,7 @@
 // features/meals/hooks/useMealsQuery.ts
-import { useQuery } from '@tanstack/react-query'
-import { getDishes, getDishesByCategory } from './services'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { createDish, deleteDish, getDishByDocumentId, getDishes, getDishesByCategory, updateDish, uploadDishImage } from './services'
+import { DishPayload } from './type'
 
 interface DishesQueryParams {
   page?: number;
@@ -59,3 +60,59 @@ export const useGetDishesByCategory = (category?: string) => {
     })
 }
 
+export const useGetDishByDocumentId = (documentId?: string) => {
+    return useQuery({
+        queryKey: ['dish', documentId],
+        queryFn: () => getDishByDocumentId(documentId ?? '', { populate: '*' }),
+        enabled: !!documentId,
+    })
+}
+
+export const useCreateDish = () => {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: (payload: DishPayload) => createDish(payload),
+        onSuccess: async () => {
+            await queryClient.invalidateQueries({ queryKey: ['dish'] })
+            await queryClient.invalidateQueries({ queryKey: ['categories'] })
+            await queryClient.refetchQueries({ queryKey: ['dish'], type: 'active' })
+            await queryClient.refetchQueries({ queryKey: ['categories'], type: 'active' })
+        }
+    })
+}
+
+export const useUpdateDish = () => {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: ({ documentId, payload }: { documentId: string, payload: Partial<DishPayload> }) =>
+            updateDish(documentId, payload),
+        onSuccess: async (_, variables) => {
+            await queryClient.invalidateQueries({ queryKey: ['dish'] })
+            await queryClient.invalidateQueries({ queryKey: ['dish', variables.documentId] })
+            await queryClient.invalidateQueries({ queryKey: ['categories'] })
+            await queryClient.refetchQueries({ queryKey: ['dish'], type: 'active' })
+            await queryClient.refetchQueries({ queryKey: ['dish', variables.documentId], type: 'active' })
+            await queryClient.refetchQueries({ queryKey: ['categories'], type: 'active' })
+        }
+    })
+}
+
+export const useDeleteDish = () => {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: (documentId: string) => deleteDish(documentId),
+        onSuccess: async () => {
+            await queryClient.invalidateQueries({ queryKey: ['dish'] })
+            await queryClient.refetchQueries({ queryKey: ['dish'], type: 'active' })
+        }
+    })
+}
+
+export const useUploadDishImage = () => {
+    return useMutation({
+        mutationFn: (file: File) => uploadDishImage(file),
+    })
+}
