@@ -96,6 +96,9 @@
     "cashier_name": {
       "type": "string"
     },
+    "customer_name": {
+      "type": "string"
+    },
     "note": {
       "type": "text"
     },
