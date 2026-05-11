@@ -486,7 +486,9 @@ export interface ApiOrderOrder extends Struct.CollectionTypeSchema {
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<'oneToMany', 'api::order.order'> &
       Schema.Attribute.Private;
-    order_status: Schema.Attribute.Enumeration<['empty', 'active', 'paid']>;
+    order_status: Schema.Attribute.Enumeration<
+      ['empty', 'active', 'paid', 'outstanding', 'cancelled', 'refunded']
+    >;
     paid_time: Schema.Attribute.DateTime;
     publishedAt: Schema.Attribute.DateTime;
     table_id: Schema.Attribute.Relation<'oneToOne', 'api::table.table'>;
