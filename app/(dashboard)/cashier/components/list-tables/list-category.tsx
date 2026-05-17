@@ -35,6 +35,7 @@ import {
   useUpdateOrderItemQuantity,
 } from "@/features/order-items/hook";
 import { OrderItem } from "@/features/order-items/type";
+import { isOrderClosed } from "@/features/order/status";
 import { STRAPI_BASE_URL } from "@/lib/strapi-client";
 
 const ListCategory = () => {
@@ -190,7 +191,7 @@ const ListCategory = () => {
     }
 
     //Check if order already exists for this table
-    if (!currentOrder || currentOrder.order_status === "paid") {
+    if (!currentOrder || isOrderClosed(currentOrder.order_status)) {
       createOrder(
         {
           table_id: currentTableRecord.documentId,

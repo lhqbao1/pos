@@ -40,6 +40,23 @@ export async function PUT(request: Request, context: RouteParams) {
   }
 }
 
+export async function PATCH(request: Request, context: RouteParams) {
+  try {
+    const { documentId } = await context.params;
+    const body = await request.json();
+    const client = createStrapiServerClient(true);
+    const response = await client.put(`/api/orders/${documentId}`, body);
+    return NextResponse.json(response.data);
+  } catch (error) {
+    console.error("[orders/:documentId PATCH]", error);
+    const { message, status } = toRouteErrorResponse(
+      error,
+      "Không thể cập nhật hóa đơn.",
+    );
+    return NextResponse.json({ message }, { status });
+  }
+}
+
 export async function DELETE(_: Request, context: RouteParams) {
   try {
     const { documentId } = await context.params;
@@ -54,4 +71,3 @@ export async function DELETE(_: Request, context: RouteParams) {
     return NextResponse.json({ message }, { status });
   }
 }
-

@@ -4,7 +4,7 @@ import OrdersTable from './orders-table'
 
 const ListOrders = () => {
     return (
-        <div className='mt-6 flex-1'>
+        <div className='mt-6 flex-1 space-y-4'>
             <SideBar />
             <OrdersTable />
         </div>

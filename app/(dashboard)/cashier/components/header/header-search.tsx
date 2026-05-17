@@ -25,6 +25,7 @@ import { useAtom } from 'jotai'
 import { toast } from 'sonner'
 import { useGetTableByTableNumber, useUpdateTableStatus } from '@/features/tables/hook'
 import { useCreateOrder, useGetOrderByTable } from '@/features/order/hook'
+import { isOrderClosed } from '@/features/order/status'
 import { useCreateOrderItem, useGetOrderItemsWithTable, useUpdateOrderItemQuantity } from '@/features/order-items/hook'
 import { OrderItem } from '@/features/order-items/type'
 
@@ -118,7 +119,7 @@ const HeaderSearch = ({ page, breadcrumbList }: HeaderSearch) => {
         }
 
         //Check if the current table has an order or not
-        if (!currentOrder || currentOrder.order_status === 'paid') {
+        if (!currentOrder || isOrderClosed(currentOrder.order_status)) {
             // If no order exists, create a new order
             createOrder(
                 {

@@ -1,41 +1,63 @@
-<<<<<<< HEAD
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# POS Monorepo
 
-## Getting Started
+Project này là monorepo:
 
-First, run the development server:
+- `.`: Next.js app (repo `pos`)
+- `./pos-strapi`: Strapi CMS code (repo `pos-strapi`)
+
+## Chạy local
+
+### Frontend (Next.js)
 
 ```bash
+cd /Users/bao/websites/pos
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Strapi CMS
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+cd /Users/bao/websites/pos/pos-strapi
+npm run develop
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Push code trong monorepo
 
-## Learn More
+### Push repo `pos` (frontend + toàn monorepo)
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+cd /Users/bao/websites/pos
+git add .
+git commit -m "your message"
+git push origin main
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Push riêng code Strapi lên repo `pos-strapi`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+cd /Users/bao/websites/pos
+git add pos-strapi
+git commit -m "chore(strapi): update cms"
+git subtree push --prefix pos-strapi strapi main
+```
 
-## Deploy on Vercel
+### Nếu bị lỗi `non-fast-forward` khi push `subtree`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+cd /Users/bao/websites/pos
+git subtree pull --prefix pos-strapi strapi main --squash
+git subtree push --prefix pos-strapi strapi main
+```
 
-# Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Kiểm tra remote
 
-# pos
+```bash
+cd /Users/bao/websites/pos
+git remote -v
+```
 
-<!-- > > > > > > > 3e222a60affd93cc76566807a5b18bb498906dc8 -->
+Kỳ vọng:
+
+- `origin` -> `https://github.com/lhqbao1/pos.git`
+- `strapi` -> `https://github.com/lhqbao1/pos-strapi.git`
+

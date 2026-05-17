@@ -1,7 +1,13 @@
 import { Dish } from "../dish/type"
 import { Table } from "../tables/type"
 
-export type OrderStatus = "empty" | "active" | "paid" | "cancelled" | "refunded";
+export type OrderStatus =
+    | "empty"
+    | "active"
+    | "paid"
+    | "outstanding"
+    | "cancelled"
+    | "refunded";
 export type OrderSource = "dine_in" | "takeaway" | "delivery";
 
 export interface Order {
@@ -17,7 +23,7 @@ export interface Order {
     publishedAt?: string;
     is_paid?: boolean;
     opened_at?: Date | string
-    paid_time?: Date
+    paid_time?: Date | string
     closed_at?: Date | string
     subtotal?: number
     discount_amount?: number
@@ -27,6 +33,7 @@ export interface Order {
     paid_amount?: number
     change_amount?: number
     cashier_name?: string
+    customer_name?: string
     note?: string
 }
 

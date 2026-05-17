@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { createOrder, getOrderByTable, getOrders, updateOrderStatus } from "./services";
-import { createOrderItem } from "../order-items/services";
+import { createOrder, getOrderByTable, getOrders, patchOrderCustomerName, updateOrderStatus } from "./services";
+import { OrderStatusFilter } from "./status";
+import { OrderStatus } from "./type";
 
 interface OrderQueryParams {
   page?: number;
@@ -10,7 +11,7 @@ interface OrderQueryParams {
   category?: string[];
   search?: string;
   sort?: string;
-  order_status?: string;
+  order_status?: OrderStatusFilter;
   start_date?: string; // ISO date string
   end_date?: string; // ISO date string
   [key: string]: any; // allows additional custom filters
@@ -68,9 +69,9 @@ export const useUpdateOrderStatus = () => {
             change_amount,
         }: {
             id: string,
-            order_status: string,
+            order_status: OrderStatus,
             is_paid?: boolean,
-            paid_time?: Date,
+            paid_time?: Date | string,
             total_amount?: number,
             paid_amount?: number,
             change_amount?: number,
@@ -79,6 +80,30 @@ export const useUpdateOrderStatus = () => {
         },
         onSuccess: () => {
             queryClient.invalidateQueries(['order-table']);
+            queryClient.invalidateQueries(['orders']);
+        }
+    });
+}
+
+export const useUpdateOrderCustomerName = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({
+            id,
+            customer_name,
+        }: {
+            id: string;
+            customer_name: string;
+        }) => {
+            if (!id) {
+                throw new Error("Không tìm thấy mã hóa đơn để lưu tên khách hàng.");
+            }
+            return patchOrderCustomerName(id, customer_name);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries(['order-table']);
+            queryClient.invalidateQueries(['orders']);
         }
     });
 }

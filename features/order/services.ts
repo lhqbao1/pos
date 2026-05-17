@@ -1,4 +1,5 @@
-import { Order } from "./type"
+import { isOrderClosed } from "./status";
+import { Order, OrderStatus } from "./type"
 import axios from "axios";
 
 export const getOrders = async (params: Record<string, string | number>) => {
@@ -28,6 +29,7 @@ export const createOrder = async (order: Order) => {
       paid_amount: order.paid_amount ?? 0,
       change_amount: order.change_amount ?? 0,
       cashier_name: order.cashier_name,
+      customer_name: order.customer_name,
       note: order.note,
     }
 
@@ -49,9 +51,9 @@ export const getOrderByTable = async (tableId?: string) => {
 
 export const updateOrderStatus = async (
     id: string,
-    order_status: string,
+    order_status: OrderStatus,
     is_paid?: boolean,
-    paid_time?: Date,
+    paid_time?: Date | string,
     total_amount?: number,
     paid_amount?: number,
     change_amount?: number
@@ -64,8 +66,32 @@ export const updateOrderStatus = async (
             total_amount: total_amount,
             paid_amount: paid_amount,
             change_amount: change_amount,
-            closed_at: order_status === 'paid' ? new Date().toISOString() : null,
+            closed_at: isOrderClosed(order_status) ? new Date().toISOString() : null,
         },
     });
     return res.data;
+}
+
+export const patchOrderCustomerName = async (
+    id: string,
+    customer_name: string
+) => {
+    try {
+        const res = await axios.put(`/api/orders/${id}`, {
+            data: {
+                customer_name,
+            },
+        });
+        return res.data;
+    } catch (error) {
+        if (axios.isAxiosError(error)) {
+            const message =
+                error.response?.data?.message ||
+                error.response?.data?.error?.message ||
+                error.message;
+            throw new Error(message);
+        }
+
+        throw error;
+    }
 }
