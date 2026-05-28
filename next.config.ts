@@ -1,12 +1,10 @@
 import type { NextConfig } from "next";
 
-const strapiRemotePattern = (() => {
-  const strapiUrl = process.env.NEXT_PUBLIC_STRAPI_URL;
-
-  if (!strapiUrl) return null;
+const createRemotePattern = (rawUrl?: string | null) => {
+  if (!rawUrl) return null;
 
   try {
-    const parsed = new URL(strapiUrl);
+    const parsed = new URL(rawUrl);
     return {
       protocol: parsed.protocol.replace(":", "") as "http" | "https",
       hostname: parsed.hostname,
@@ -15,22 +13,13 @@ const strapiRemotePattern = (() => {
   } catch {
     return null;
   }
-})();
+};
 
-const strapiMediaRemotePattern = (() => {
-  if (!strapiRemotePattern) return null;
+const apiRemotePattern = createRemotePattern(
+  process.env.NEXT_PUBLIC_NEST_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL,
+);
 
-  const suffix = ".strapiapp.com";
-  if (!strapiRemotePattern.hostname.endsWith(suffix)) return null;
-
-  const subdomain = strapiRemotePattern.hostname.slice(0, -suffix.length);
-  if (!subdomain) return null;
-
-  return {
-    protocol: "https" as const,
-    hostname: `${subdomain}.media.strapiapp.com`,
-  };
-})();
+const mediaRemotePattern = createRemotePattern(process.env.NEXT_PUBLIC_MEDIA_BASE_URL);
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -53,8 +42,8 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "localhost",
       },
-      ...(strapiRemotePattern ? [strapiRemotePattern] : []),
-      ...(strapiMediaRemotePattern ? [strapiMediaRemotePattern] : []),
+      ...(apiRemotePattern ? [apiRemotePattern] : []),
+      ...(mediaRemotePattern ? [mediaRemotePattern] : []),
     ],
   },
   /* config options here */

@@ -7,8 +7,8 @@ import {
 import Image from 'next/image'
 import { PackageCheck, Star } from 'lucide-react'
 import { Dish } from '@/features/dish/type'
-import { STRAPI_BASE_URL } from '@/lib/strapi-client'
 import { formattedNumber } from '@/lib/format-vnd'
+import { resolveMediaUrl } from '@/lib/media-url'
 
 type MealsListProps = {
     data: Dish
@@ -16,11 +16,7 @@ type MealsListProps = {
 }
 
 const MealCart = ({ data, actions }: MealsListProps) => {
-    const imageUrl = data.image?.url
-        ? data.image.url.startsWith('http')
-            ? data.image.url
-            : `${STRAPI_BASE_URL}${data.image.url}`
-        : '/placeholder-image.jpg'
+    const imageUrl = resolveMediaUrl(data.image?.url) || '/placeholder-image.jpg'
 
     return (
         <Card className='group gap-3 overflow-hidden rounded-2xl border border-[#efe1d1] bg-white/95 p-3 shadow-[0_8px_20px_rgba(149,103,61,0.08)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_14px_28px_rgba(149,103,61,0.16)]'>

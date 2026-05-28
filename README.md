@@ -1,63 +1,45 @@
-# POS Monorepo
+# POS Project
 
-Project này là monorepo:
+Project gồm 2 phần chính:
 
-- `.`: Next.js app (repo `pos`)
-- `./pos-strapi`: Strapi CMS code (repo `pos-strapi`)
+- `.`: Next.js frontend (repo hiện tại)
+- `./nest-backend`: NestJS + Prisma + SQLite backend chạy local
 
 ## Chạy local
 
-### Frontend (Next.js)
+### 1) Chạy backend (NestJS)
+
+```bash
+cd /Users/bao/websites/pos/nest-backend
+npm install
+npm run prisma:generate
+npm run prisma:migrate -- --name init
+npm run start:dev
+```
+
+Backend mặc định chạy tại `http://localhost:3002`.
+
+### 2) Chạy frontend (Next.js)
 
 ```bash
 cd /Users/bao/websites/pos
+npm install
 npm run dev
 ```
 
-### Strapi CMS
+Frontend dùng các API nội bộ `app/api/*`, và các route này proxy sang backend NestJS local.
 
-```bash
-cd /Users/bao/websites/pos/pos-strapi
-npm run develop
+## Biến môi trường frontend
+
+Tạo `.env.local` từ `.env.local.example`:
+
+```env
+NEST_API_URL=http://localhost:3002
+NEXT_PUBLIC_NEST_API_URL=http://localhost:3002
+NEXT_PUBLIC_API_BASE_URL=http://localhost:3002
+# Optional: NEXT_PUBLIC_MEDIA_BASE_URL=https://your-media-host.com
 ```
 
-## Push code trong monorepo
+## Import món ăn
 
-### Push repo `pos` (frontend + toàn monorepo)
-
-```bash
-cd /Users/bao/websites/pos
-git add .
-git commit -m "your message"
-git push origin main
-```
-
-### Push riêng code Strapi lên repo `pos-strapi`
-
-```bash
-cd /Users/bao/websites/pos
-git add pos-strapi
-git commit -m "chore(strapi): update cms"
-git subtree push --prefix pos-strapi strapi main
-```
-
-### Nếu bị lỗi `non-fast-forward` khi push `subtree`
-
-```bash
-cd /Users/bao/websites/pos
-git subtree pull --prefix pos-strapi strapi main --squash
-git subtree push --prefix pos-strapi strapi main
-```
-
-## Kiểm tra remote
-
-```bash
-cd /Users/bao/websites/pos
-git remote -v
-```
-
-Kỳ vọng:
-
-- `origin` -> `https://github.com/lhqbao1/pos.git`
-- `strapi` -> `https://github.com/lhqbao1/pos-strapi.git`
-
+Xem hướng dẫn tại [docs/dishes-import.md](./docs/dishes-import.md).

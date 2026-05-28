@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
-import { createStrapiServerClient } from "@/lib/server/strapi-server-client";
-import { toRouteErrorResponse } from "@/lib/server/strapi-route-error";
+import {
+  toBackendOrderPayload,
+  toLegacyOrder,
+  unwrapPayload,
+  wrapSingleResponse,
+} from "@/lib/server/backend-adapter";
+import { createBackendServerClient } from "@/lib/server/backend-server-client";
+import { toRouteErrorResponse } from "@/lib/server/route-error";
 
 export const runtime = "nodejs";
 
@@ -8,13 +14,13 @@ type RouteParams = {
   params: Promise<{ documentId: string }>;
 };
 
-export async function GET(request: Request, context: RouteParams) {
+export async function GET(_: Request, context: RouteParams) {
   try {
     const { documentId } = await context.params;
-    const { search } = new URL(request.url);
-    const client = createStrapiServerClient(false);
-    const response = await client.get(`/api/orders/${documentId}${search}`);
-    return NextResponse.json(response.data);
+    const client = createBackendServerClient();
+    const response = await client.get(`/api/orders/${documentId}`);
+
+    return NextResponse.json(wrapSingleResponse(toLegacyOrder(response.data?.data)));
   } catch (error) {
     const { message, status } = toRouteErrorResponse(
       error,
@@ -28,9 +34,11 @@ export async function PUT(request: Request, context: RouteParams) {
   try {
     const { documentId } = await context.params;
     const body = await request.json();
-    const client = createStrapiServerClient(true);
-    const response = await client.put(`/api/orders/${documentId}`, body);
-    return NextResponse.json(response.data);
+    const payload = toBackendOrderPayload(unwrapPayload(body));
+    const client = createBackendServerClient();
+    const response = await client.put(`/api/orders/${documentId}`, { data: payload });
+
+    return NextResponse.json(wrapSingleResponse(toLegacyOrder(response.data?.data)));
   } catch (error) {
     const { message, status } = toRouteErrorResponse(
       error,
@@ -41,28 +49,16 @@ export async function PUT(request: Request, context: RouteParams) {
 }
 
 export async function PATCH(request: Request, context: RouteParams) {
-  try {
-    const { documentId } = await context.params;
-    const body = await request.json();
-    const client = createStrapiServerClient(true);
-    const response = await client.put(`/api/orders/${documentId}`, body);
-    return NextResponse.json(response.data);
-  } catch (error) {
-    console.error("[orders/:documentId PATCH]", error);
-    const { message, status } = toRouteErrorResponse(
-      error,
-      "Không thể cập nhật hóa đơn.",
-    );
-    return NextResponse.json({ message }, { status });
-  }
+  return PUT(request, context);
 }
 
 export async function DELETE(_: Request, context: RouteParams) {
   try {
     const { documentId } = await context.params;
-    const client = createStrapiServerClient(true);
+    const client = createBackendServerClient();
     const response = await client.delete(`/api/orders/${documentId}`);
-    return NextResponse.json(response.data);
+
+    return NextResponse.json(wrapSingleResponse(toLegacyOrder(response.data?.data)));
   } catch (error) {
     const { message, status } = toRouteErrorResponse(
       error,

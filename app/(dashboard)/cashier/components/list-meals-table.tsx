@@ -913,7 +913,7 @@ const ListMealsTable = () => {
           Không tải được dữ liệu thu ngân
         </h2>
         <p className="text-sm text-zinc-500">
-          Vui lòng kiểm tra kết nối hoặc quyền API trên Strapi.
+          Vui lòng kiểm tra kết nối hoặc quyền API backend.
         </p>
         <Button
           onClick={handleRetry}

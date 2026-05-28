@@ -1,0 +1,193 @@
+generator client {
+  provider = "prisma-client-js"
+  engineType = "binary"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum TableType {
+  Normal
+  Vip
+}
+
+enum TableStatus {
+  Empty
+  Using
+  Reserved
+  Cleaning
+  Disabled
+}
+
+enum OrderStatus {
+  empty
+  active
+  paid
+  outstanding
+  cancelled
+  refunded
+}
+
+enum OrderSource {
+  dine_in
+  takeaway
+  delivery
+}
+
+enum KitchenStatus {
+  pending
+  preparing
+  served
+  cancelled
+}
+
+enum PaymentMethod {
+  cash
+  card
+  bank_transfer
+  e_wallet
+}
+
+enum PaymentStatus {
+  pending
+  success
+  failed
+  refunded
+}
+
+model Category {
+  id          Int      @id @default(autoincrement())
+  documentId  String   @unique @default(uuid())
+  name        String
+  slug        String   @unique
+  description String?
+  image       String?
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  dishes      Dish[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([name])
+}
+
+model Dish {
+  id          Int        @id @default(autoincrement())
+  documentId  String     @unique @default(uuid())
+  name        String
+  slug        String     @unique
+  sku         String?    @unique
+  description String?
+  price       Int
+  vipPrice    Int        @default(0)
+  costPrice   Int        @default(0)
+  image       String?
+  isActive    Boolean    @default(true)
+  sortOrder   Int        @default(0)
+  sold        Int        @default(0)
+  rating      Float      @default(0)
+  categoryId  Int?
+  category    Category?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  orderItems  OrderItem[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([name])
+  @@index([categoryId])
+}
+
+model Table {
+  id            Int         @id @default(autoincrement())
+  documentId    String      @unique @default(uuid())
+  tableNumber   String      @unique
+  displayName   String?
+  type          TableType   @default(Normal)
+  tableStatus   TableStatus @default(Empty)
+  capacity      Int         @default(4)
+  zone          String?
+  note          String?
+  isActive      Boolean     @default(true)
+  occupiedSince DateTime?
+  lastClearedAt DateTime?
+  orders        Order[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([tableStatus])
+}
+
+model Order {
+  id             Int         @id @default(autoincrement())
+  documentId     String      @unique @default(uuid())
+  orderNo        String?     @unique
+  tableId        Int?
+  table          Table?      @relation(fields: [tableId], references: [id], onDelete: SetNull)
+  orderStatus    OrderStatus @default(active)
+  source         OrderSource @default(dine_in)
+  guestCount     Int         @default(1)
+  isPaid         Boolean     @default(false)
+  openedAt       DateTime?
+  paidTime       DateTime?
+  closedAt       DateTime?
+  subtotal       Int         @default(0)
+  discountAmount Int         @default(0)
+  taxAmount      Int         @default(0)
+  serviceCharge  Int         @default(0)
+  totalAmount    Int         @default(0)
+  paidAmount     Int         @default(0)
+  changeAmount   Int         @default(0)
+  cashierName    String?
+  customerName   String?
+  note           String?
+  items          OrderItem[]
+  payments       Payment[]
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([orderStatus])
+  @@index([tableId])
+}
+
+model OrderItem {
+  id               Int           @id @default(autoincrement())
+  documentId       String        @unique @default(uuid())
+  dishId           Int
+  dish             Dish          @relation(fields: [dishId], references: [id], onDelete: Restrict)
+  orderId          Int
+  order            Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  quantity         Int           @default(1)
+  priceAtOrder     Int
+  lineTotal        Int           @default(0)
+  discountAmount   Int           @default(0)
+  dishNameSnapshot String?
+  dishSkuSnapshot  String?
+  note             String?
+  kitchenStatus    KitchenStatus @default(pending)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([dishId])
+  @@index([orderId])
+}
+
+model Payment {
+  id         Int           @id @default(autoincrement())
+  documentId String        @unique @default(uuid())
+  orderId    Int
+  order      Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  method     PaymentMethod @default(cash)
+  status     PaymentStatus @default(success)
+  amount     Int
+  currency   String        @default("VND")
+  paidAt     DateTime?
+  reference  String?
+  note       String?
+  metadata   Json?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@index([orderId])
+  @@index([status])
+}

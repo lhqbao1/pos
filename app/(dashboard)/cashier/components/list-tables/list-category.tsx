@@ -36,7 +36,7 @@ import {
 } from "@/features/order-items/hook";
 import { OrderItem } from "@/features/order-items/type";
 import { isOrderClosed } from "@/features/order/status";
-import { STRAPI_BASE_URL } from "@/lib/strapi-client";
+import { resolveMediaUrl } from "@/lib/media-url";
 
 const ListCategory = () => {
   const [selectedCategory, setSelectedCategory] = useState("");
@@ -419,11 +419,9 @@ const ListCategory = () => {
         </Button>
         <div className="mt-3 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {dishesData.data.map((dish: Dish, index: number) => {
-            const imageUrl = dish?.image?.url
-              ? dish.image.url.startsWith("http")
-                ? dish.image.url
-                : `${STRAPI_BASE_URL}${dish.image.url}`
-              : "https://lh3.googleusercontent.com/gps-cs-s/AC9h4np2nCF2_67uvFaXBDH4da5xhtg5FUTqQzLXTk7Ugj2grs9pD0MxUBvct5WKi8tjuF8et82JOJYVb4qlwy_v2HOge4exFAmd4dI8ClzetLa3ltyYXATUHpnuocg3bZ44BhHSJ2hl=s1360-w1360-h1020-rw";
+            const imageUrl =
+              resolveMediaUrl(dish?.image?.url) ||
+              "https://lh3.googleusercontent.com/gps-cs-s/AC9h4np2nCF2_67uvFaXBDH4da5xhtg5FUTqQzLXTk7Ugj2grs9pD0MxUBvct5WKi8tjuF8et82JOJYVb4qlwy_v2HOge4exFAmd4dI8ClzetLa3ltyYXATUHpnuocg3bZ44BhHSJ2hl=s1360-w1360-h1020-rw";
 
             return (
               <Card
@@ -475,13 +473,7 @@ const ListCategory = () => {
             </CardHeader>
             <CardContent className="p-0">
               <Image
-                src={
-                  item?.image?.url
-                    ? item.image.url.startsWith("http")
-                      ? item.image.url
-                      : `${STRAPI_BASE_URL}${item.image.url}`
-                    : "/category-food-placeholder.svg"
-                }
+                src={resolveMediaUrl(item?.image?.url) || "/category-food-placeholder.svg"}
                 width={200}
                 height={200}
                 alt={item.name}
