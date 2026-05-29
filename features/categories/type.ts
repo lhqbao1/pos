@@ -1,4 +1,4 @@
-import { StrapiImage } from "@/lib/type/starpi-image";
+import { MediaImage } from "@/lib/type/media-image";
 
 export interface Category {
   id: number;
@@ -6,7 +6,7 @@ export interface Category {
   name: string;
   slug?: string;
   description?: string;
-  image?: StrapiImage;
+  image?: Partial<MediaImage> & { url: string };
   sortOrder?: number;
   isActive?: boolean;
   createdAt?: string;

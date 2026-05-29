@@ -1,6 +1,7 @@
 import axios, { type AxiosInstance } from "axios";
 import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
+import { createBackendServerClient } from "@/lib/server/backend-server-client";
 
 export const runtime = "nodejs";
 
@@ -212,44 +213,34 @@ const normalizeRow = (row: RawInputRow, rowNumber: number): ParsedDishRow | null
   return parsed;
 };
 
-const createStrapiClient = () => {
-  const baseURL = (process.env.STRAPI_URL || process.env.NEXT_PUBLIC_STRAPI_URL || "").replace(/\/$/, "");
-  const token = process.env.STRAPI_API_TOKEN || "";
+type BackendCategory = {
+  documentId?: string;
+  name?: string;
+};
 
-  if (!baseURL) {
-    throw new Error("Thiếu STRAPI_URL hoặc NEXT_PUBLIC_STRAPI_URL trong môi trường.");
-  }
-
-  if (!token) {
-    throw new Error("Thiếu STRAPI_API_TOKEN trong môi trường.");
-  }
-
-  return axios.create({
-    baseURL,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-  });
+type BackendDish = {
+  documentId?: string;
+  name?: string;
+  sku?: string;
+  category?: {
+    documentId?: string;
+    name?: string;
+  } | null;
 };
 
 const resolveCategory = async (
   client: AxiosInstance,
   categoryName: string,
-  cache: Map<string, string>
+  cache: Map<string, string>,
+  knownCategories: BackendCategory[],
 ): Promise<{ documentId: string; created: boolean }> => {
   const cacheKey = categoryName.trim().toLowerCase();
   const cached = cache.get(cacheKey);
   if (cached) return { documentId: cached, created: false };
 
-  const found = await client.get("/api/categories", {
-    params: {
-      "filters[name][$eqi]": categoryName,
-      "pagination[pageSize]": 1,
-    },
-  });
-
-  const existing = found.data?.data?.[0];
+  const existing = knownCategories.find(
+    (category) => category.name?.trim().toLowerCase() === cacheKey,
+  );
   if (existing?.documentId) {
     cache.set(cacheKey, existing.documentId);
     return { documentId: existing.documentId, created: false };
@@ -274,36 +265,36 @@ const resolveCategory = async (
   }
 
   cache.set(cacheKey, documentId);
+  knownCategories.push({
+    documentId,
+    name: categoryName,
+  });
   return { documentId, created: true };
 };
 
 const findDishByUniqueKeys = async (
-  client: AxiosInstance,
   row: ParsedDishRow,
+  dishes: BackendDish[],
   categoryDocumentId?: string
 ): Promise<string | undefined> => {
   if (row.sku) {
-    const bySku = await client.get("/api/dishes", {
-      params: {
-        "filters[sku][$eqi]": row.sku,
-        "pagination[pageSize]": 1,
-      },
-    });
-    const existingBySku = bySku.data?.data?.[0]?.documentId;
+    const existingBySku = dishes.find(
+      (dish) => dish.sku?.trim().toLowerCase() === row.sku?.trim().toLowerCase(),
+    )?.documentId;
     if (existingBySku) return existingBySku;
   }
 
-  const params: Record<string, string | number> = {
-    "filters[name][$eqi]": row.name,
-    "pagination[pageSize]": 1,
-  };
+  return dishes.find((dish) => {
+    if (dish.name?.trim().toLowerCase() !== row.name.trim().toLowerCase()) {
+      return false;
+    }
 
-  if (categoryDocumentId) {
-    params["filters[category][documentId][$eq]"] = categoryDocumentId;
-  }
+    if (!categoryDocumentId) {
+      return true;
+    }
 
-  const byName = await client.get("/api/dishes", { params });
-  return byName.data?.data?.[0]?.documentId;
+    return dish.category?.documentId === categoryDocumentId;
+  })?.documentId;
 };
 
 const buildDishPayload = (row: ParsedDishRow, categoryDocumentId?: string) => {
@@ -332,16 +323,25 @@ const buildDishPayload = (row: ParsedDishRow, categoryDocumentId?: string) => {
 const upsertDish = async (
   client: AxiosInstance,
   row: ParsedDishRow,
+  dishes: BackendDish[],
   categoryDocumentId?: string
 ): Promise<"created" | "updated"> => {
   const payload = buildDishPayload(row, categoryDocumentId);
-  const existingDocumentId = await findDishByUniqueKeys(client, row, categoryDocumentId);
+  const existingDocumentId = await findDishByUniqueKeys(row, dishes, categoryDocumentId);
 
   if (existingDocumentId) {
     try {
-      await client.put(`/api/dishes/${existingDocumentId}`, {
+      const updated = await client.put(`/api/dishes/${existingDocumentId}`, {
         data: payload,
       });
+
+      const updatedData = updated.data?.data as BackendDish | undefined;
+      if (updatedData?.documentId) {
+        const index = dishes.findIndex((dish) => dish.documentId === updatedData.documentId);
+        if (index >= 0) {
+          dishes[index] = updatedData;
+        }
+      }
     } catch (error) {
       throw new Error(`Cập nhật món thất bại: ${getErrorMessage(error)}`);
     }
@@ -349,9 +349,14 @@ const upsertDish = async (
   }
 
   try {
-    await client.post("/api/dishes", {
+    const created = await client.post("/api/dishes", {
       data: payload,
     });
+
+    const createdData = created.data?.data as BackendDish | undefined;
+    if (createdData?.documentId) {
+      dishes.push(createdData);
+    }
   } catch (error) {
     throw new Error(`Tạo món thất bại: ${getErrorMessage(error)}`);
   }
@@ -407,22 +412,40 @@ export async function POST(request: Request) {
       }
     });
 
-    const client = createStrapiClient();
+    const client = createBackendServerClient();
     const categoryCache = new Map<string, string>();
+    const categoriesResponse = await client.get("/api/categories", {
+      params: { page: 1, pageSize: 10000 },
+    });
+    const dishesResponse = await client.get("/api/dishes", {
+      params: { page: 1, pageSize: 10000 },
+    });
+
+    const knownCategories: BackendCategory[] = Array.isArray(categoriesResponse.data?.data)
+      ? categoriesResponse.data.data
+      : [];
+    const knownDishes: BackendDish[] = Array.isArray(dishesResponse.data?.data)
+      ? dishesResponse.data.data
+      : [];
 
     for (const row of parsedRows) {
       try {
         let categoryDocumentId: string | undefined;
 
         if (row.categoryName) {
-          const resolved = await resolveCategory(client, row.categoryName, categoryCache);
+          const resolved = await resolveCategory(
+            client,
+            row.categoryName,
+            categoryCache,
+            knownCategories,
+          );
           categoryDocumentId = resolved.documentId;
           if (resolved.created) {
             summary.categoriesCreated += 1;
           }
         }
 
-        const action = await upsertDish(client, row, categoryDocumentId);
+        const action = await upsertDish(client, row, knownDishes, categoryDocumentId);
         if (action === "created") summary.created += 1;
         if (action === "updated") summary.updated += 1;
       } catch (error) {

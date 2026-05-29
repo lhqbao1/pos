@@ -5,13 +5,10 @@
 Thêm biến trong `.env` hoặc `.env.local`:
 
 ```env
-NEXT_PUBLIC_STRAPI_URL=https://your-project.strapiapp.com
-STRAPI_API_TOKEN=your-strapi-api-token
+NEST_API_URL=http://localhost:3002
+NEXT_PUBLIC_NEST_API_URL=http://localhost:3002
+NEXT_PUBLIC_API_BASE_URL=http://localhost:3002
 ```
-
-`STRAPI_API_TOKEN` cần quyền trên các collection:
-- `Dish`: create, update, find
-- `Category`: create, find
 
 ## 2) Cài dependency parser Excel
 

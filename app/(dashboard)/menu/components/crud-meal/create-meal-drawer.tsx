@@ -18,6 +18,7 @@ import { useCreateDish, useUpdateDish, useUploadDishImage } from "@/features/dis
 import { Dish, DishPayload } from "@/features/dish/type"
 import { useGetAllCategories } from "@/features/categories/hook"
 import { Category } from "@/features/categories/type"
+import { resolveMediaUrl } from "@/lib/media-url"
 
 const formSchema = z.object({
   name: z.string().trim().min(2, "Tên món tối thiểu 2 ký tự."),
@@ -51,23 +52,16 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "")
 
-const resolveStrapiImageUrl = (url?: string) => {
-  if (!url) return null
-  if (url.startsWith("http://") || url.startsWith("https://")) return url
-
-  const baseUrl = (process.env.NEXT_PUBLIC_STRAPI_URL || "").replace(/\/$/, "")
-  if (!baseUrl) return url
-  return `${baseUrl}${url}`
-}
-
-const extractUploadedImageId = (payload: unknown): number | undefined => {
+const extractUploadedImageUrl = (payload: unknown): string | undefined => {
   if (Array.isArray(payload)) {
-    return typeof payload[0]?.id === "number" ? payload[0].id : undefined
+    return typeof payload[0]?.url === "string" ? payload[0].url : undefined
   }
 
   if (payload && typeof payload === "object") {
-    const maybePayload = payload as { data?: Array<{ id?: number }> }
-    return typeof maybePayload.data?.[0]?.id === "number" ? maybePayload.data?.[0]?.id : undefined
+    const maybePayload = payload as { data?: Array<{ url?: string }> }
+    return typeof maybePayload.data?.[0]?.url === "string"
+      ? maybePayload.data?.[0]?.url
+      : undefined
   }
 
   return undefined
@@ -107,7 +101,9 @@ const CreateMealDrawer = ({ mode = "create", dish, onSaved, trigger }: Props) =>
 
   const [imageFile, setImageFile] = React.useState<File | null>(null)
   const [removeImage, setRemoveImage] = React.useState(false)
-  const [imagePreviewUrl, setImagePreviewUrl] = React.useState<string | null>(resolveStrapiImageUrl(dish?.image?.url))
+  const [imagePreviewUrl, setImagePreviewUrl] = React.useState<string | null>(
+    resolveMediaUrl(dish?.image?.url) ?? null,
+  )
   const objectUrlRef = React.useRef<string | null>(null)
 
   const resetImageStates = React.useCallback((sourceDish?: Dish) => {
@@ -118,7 +114,7 @@ const CreateMealDrawer = ({ mode = "create", dish, onSaved, trigger }: Props) =>
 
     setImageFile(null)
     setRemoveImage(false)
-    setImagePreviewUrl(resolveStrapiImageUrl(sourceDish?.image?.url))
+    setImagePreviewUrl(resolveMediaUrl(sourceDish?.image?.url) ?? null)
   }, [])
 
   React.useEffect(() => {
@@ -172,17 +168,17 @@ const CreateMealDrawer = ({ mode = "create", dish, onSaved, trigger }: Props) =>
 
   const onSubmit = async (values: FormValues) => {
     try {
-      let imageValue: number | null | undefined = undefined
+      let imageValue: string | null | undefined = undefined
 
       if (imageFile) {
         const uploadResult = await uploadDishImage(imageFile)
-        const uploadedImageId = extractUploadedImageId(uploadResult)
+        const uploadedImageUrl = extractUploadedImageUrl(uploadResult)
 
-        if (!uploadedImageId) {
-          throw new Error("Upload ảnh thất bại, không lấy được image id.")
+        if (!uploadedImageUrl) {
+          throw new Error("Upload ảnh thất bại, không lấy được URL ảnh.")
         }
 
-        imageValue = uploadedImageId
+        imageValue = uploadedImageUrl
       } else if (removeImage) {
         imageValue = null
       }

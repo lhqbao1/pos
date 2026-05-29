@@ -1,4 +1,4 @@
-import { StrapiImage } from "@/lib/type/starpi-image";
+import { MediaImage } from "@/lib/type/media-image";
 import { Category } from "../categories/type";
 
 export interface Dish {
@@ -8,7 +8,7 @@ export interface Dish {
     slug?: string,
     sku?: string,
     description?: string,
-    image?: StrapiImage,
+    image?: Partial<MediaImage> & { url: string },
     rating?: number,
     sold?: number,
     price?: number,
@@ -34,6 +34,6 @@ export interface DishPayload {
     isActive?: boolean
     sortOrder?: number
     category?: string
-    image?: number | null
+    image?: string | number | null
     slug?: string
 }

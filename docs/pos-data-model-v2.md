@@ -87,11 +87,10 @@
   - `discount_amount = 0`
   - `kitchen_status = pending`
 
-## Strapi Cloud Checklist
-1. Deploy backend changes from `pos-strapi`.
-2. In Strapi admin, verify public/auth permissions for:
-   - `category`, `dish`, `table`, `order`, `order-item`, `payment`.
+## Backend Checklist
+1. Run backend migration in `nest-backend` and start server on local port.
+2. Verify API routes: `category`, `dish`, `table`, `order`, `order-item`, `payment`.
 3. Rebuild frontend and ensure:
-   - `NEXT_PUBLIC_STRAPI_URL` points to cloud domain (without `/admin`).
+   - `NEST_API_URL` / `NEXT_PUBLIC_NEST_API_URL` point to backend domain.
 4. Test end-to-end flow:
    - Open table -> create order -> add item -> pay -> check `payments` created.

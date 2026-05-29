@@ -1,15 +1,33 @@
 import { NextResponse } from "next/server";
-import { createStrapiServerClient } from "@/lib/server/strapi-server-client";
-import { toRouteErrorResponse } from "@/lib/server/strapi-route-error";
+import {
+  filterCategories,
+  sortAndPaginate,
+  toBackendCategoryPayload,
+  toLegacyCategory,
+  unwrapPayload,
+  wrapListResponse,
+  wrapSingleResponse,
+} from "@/lib/server/backend-adapter";
+import { createBackendServerClient } from "@/lib/server/backend-server-client";
+import { toRouteErrorResponse } from "@/lib/server/route-error";
 
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
   try {
-    const { search } = new URL(request.url);
-    const client = createStrapiServerClient(false);
-    const response = await client.get(`/api/categories${search}`);
-    return NextResponse.json(response.data);
+    const { searchParams } = new URL(request.url);
+    const client = createBackendServerClient();
+
+    const response = await client.get("/api/categories", {
+      params: { page: 1, pageSize: 10000 },
+    });
+
+    const rawItems = Array.isArray(response.data?.data) ? response.data.data : [];
+    const items = rawItems.map(toLegacyCategory);
+    const filtered = filterCategories(items, searchParams);
+    const { data, total } = sortAndPaginate(filtered, searchParams);
+
+    return NextResponse.json(wrapListResponse(data, total));
   } catch (error) {
     const { message, status } = toRouteErrorResponse(
       error,
@@ -22,9 +40,11 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const client = createStrapiServerClient(true);
-    const response = await client.post("/api/categories", body);
-    return NextResponse.json(response.data);
+    const payload = toBackendCategoryPayload(unwrapPayload(body));
+    const client = createBackendServerClient();
+    const response = await client.post("/api/categories", { data: payload });
+
+    return NextResponse.json(wrapSingleResponse(toLegacyCategory(response.data?.data)));
   } catch (error) {
     const { message, status } = toRouteErrorResponse(
       error,
@@ -33,4 +53,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ message }, { status });
   }
 }
-

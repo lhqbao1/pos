@@ -1,61 +1,50 @@
 import React from 'react'
 import MealCart from './meal-cart'
+import { Dish } from '@/features/dish/type'
 
-interface MealsList {
-    id: number,
-    name: string,
-    image: {
-        url: string
-    },
-    category: string,
-    ratings: number,
-    sold: number,
-    price: number
-}
-
-const MealsData: MealsList[] = [
+const MealsData: Dish[] = [
     {
         id: 1,
         name: "Mực chiên bột",
         image: { url: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS6s8cNMGwxULv7mqQr1ie0wax1SzHKEXYfQg&s" },
-        category: "Hải sản",
-        ratings: 3.4,
+        category: { id: 1, name: "Hải sản" },
+        rating: 3.4,
         sold: 76,
         price: 100000
     },
     {
-        id: 1,
+        id: 2,
         name: "Mực chiên bột",
         image: { url: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS6s8cNMGwxULv7mqQr1ie0wax1SzHKEXYfQg&s" },
-        category: "Hải sản",
-        ratings: 3.4,
+        category: { id: 1, name: "Hải sản" },
+        rating: 3.4,
         sold: 76,
         price: 100000
     },
     {
-        id: 1,
+        id: 3,
         name: "Mực chiên bột",
         image: { url: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS6s8cNMGwxULv7mqQr1ie0wax1SzHKEXYfQg&s" },
-        category: "Hải sản",
-        ratings: 3.4,
+        category: { id: 1, name: "Hải sản" },
+        rating: 3.4,
         sold: 76,
         price: 100000
     },
     {
-        id: 1,
+        id: 4,
         name: "Mực chiên bột",
         image: { url: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS6s8cNMGwxULv7mqQr1ie0wax1SzHKEXYfQg&s" },
-        category: "Hải sản",
-        ratings: 3.4,
+        category: { id: 1, name: "Hải sản" },
+        rating: 3.4,
         sold: 76,
         price: 100000
     },
     {
-        id: 1,
+        id: 5,
         name: "Mực chiên bột",
         image: { url: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS6s8cNMGwxULv7mqQr1ie0wax1SzHKEXYfQg&s" },
-        category: "Hải sản",
-        ratings: 3.4,
+        category: { id: 1, name: "Hải sản" },
+        rating: 3.4,
         sold: 76,
         price: 100000
     },

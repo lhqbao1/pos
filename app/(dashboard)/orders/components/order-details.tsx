@@ -29,7 +29,7 @@ import { getOrderStatusMeta } from '@/features/order/status'
 import { Order, OrderStatus } from '@/features/order/type'
 import { useCreatePayment } from '@/features/payments/hook'
 import { formattedNumber } from '@/lib/format-vnd'
-import { STRAPI_BASE_URL } from '@/lib/strapi-client'
+import { resolveMediaUrl } from '@/lib/media-url'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -436,13 +436,7 @@ const OrderDetails = ({ order }: { order: Order }) => {
     })
 
     const resolveDishImageUrl = (dish: Dish) => {
-        if (!dish?.image?.url) {
-            return '/category-food-placeholder.svg'
-        }
-
-        return dish.image.url.startsWith('http')
-            ? dish.image.url
-            : `${STRAPI_BASE_URL}${dish.image.url}`
+        return resolveMediaUrl(dish?.image?.url) || '/category-food-placeholder.svg'
     }
 
     const resolveDishUnitPrice = (dish: Dish) => {
@@ -1159,13 +1153,7 @@ const OrderDetails = ({ order }: { order: Order }) => {
                                                     </CardHeader>
                                                     <CardContent className='p-0'>
                                                         <Image
-                                                            src={
-                                                                item?.image?.url
-                                                                    ? item.image.url.startsWith('http')
-                                                                        ? item.image.url
-                                                                        : `${STRAPI_BASE_URL}${item.image.url}`
-                                                                    : '/category-food-placeholder.svg'
-                                                            }
+                                                            src={resolveMediaUrl(item?.image?.url) || '/category-food-placeholder.svg'}
                                                             width={200}
                                                             height={200}
                                                             alt={item.name}
