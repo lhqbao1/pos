@@ -308,7 +308,12 @@ const OrdersTable = () => {
 
     const rawOrders: Order[] = listOrders?.data ?? []
     const orders = useMemo(
-        () => rawOrders.filter((order) => order.order_status !== "active"),
+        () =>
+            rawOrders.filter(
+                (order) =>
+                    order.order_status !== "active" &&
+                    order.order_status !== "empty",
+            ),
         [rawOrders],
     )
     const hasOrders = orders.length > 0

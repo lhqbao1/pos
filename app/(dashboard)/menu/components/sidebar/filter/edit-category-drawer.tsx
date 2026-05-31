@@ -63,10 +63,9 @@ const mapCategoryToFormValues = (category: Category): FormValues => ({
 type Props = {
   category: Category;
   trigger: React.ReactNode;
-  onUpdated?: () => Promise<void> | void;
 };
 
-const EditCategoryDrawer = ({ category, trigger, onUpdated }: Props) => {
+const EditCategoryDrawer = ({ category, trigger }: Props) => {
   const [open, setOpen] = React.useState(false);
   const { mutateAsync: updateCategory, isLoading } = useUpdateCategory();
 
@@ -100,7 +99,6 @@ const EditCategoryDrawer = ({ category, trigger, onUpdated }: Props) => {
 
       toast.success("Cập nhật danh mục thành công.");
       setOpen(false);
-      await onUpdated?.();
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Cập nhật danh mục thất bại.";

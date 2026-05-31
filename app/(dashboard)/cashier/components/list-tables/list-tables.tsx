@@ -7,14 +7,17 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAtom } from 'jotai'
 import { tableIdAtom, tableNumberAtom } from '@/lib/atom/table/tables'
+import EditTableDrawer from './edit-table-drawer'
 
 
 const ListTables = () => {
     const { data, isInitialLoading, isFetching, isError, refetch } = useGetTables()
     const [isManualRefetching, setIsManualRefetching] = useState(false)
     const [currentTable, setCurrentTable] = useAtom(tableNumberAtom)
-    const [, setCurrentTableId] = useAtom(tableIdAtom)
+    const [currentTableId, setCurrentTableId] = useAtom(tableIdAtom)
     const [nowMs, setNowMs] = useState(() => Date.now())
+    const [editingTable, setEditingTable] = useState<Table | null>(null)
+    const [openEditDrawer, setOpenEditDrawer] = useState(false)
 
     const showSkeleton = isInitialLoading || (isFetching && (!data?.data?.length || isManualRefetching))
 
@@ -76,16 +79,52 @@ const ListTables = () => {
         setCurrentTableId(tableId)
     }
 
+    const handleEditTable = (table: Table) => {
+        if (!table.documentId) return
+        setEditingTable(table)
+        setOpenEditDrawer(true)
+    }
+
+    const handleUpdatedTable = (updatedTable: Table) => {
+        if (!updatedTable.documentId) return
+
+        const isEditingSelectedTable =
+            updatedTable.documentId === currentTableId ||
+            updatedTable.tableNumber === currentTable
+
+        if (isEditingSelectedTable) {
+            setCurrentTable(updatedTable.tableNumber)
+            setCurrentTableId(updatedTable.documentId)
+        }
+    }
+
     return (
-        <div className='grid grid-cols-2 gap-3'>
-            {data.data.map((item: Table, index: number) => {
-                return (
-                    <div onClick={() => onCLickTable(item.tableNumber, item.documentId ?? "")} key={index}>
-                        <TableCard isChoosing={currentTable ?? ''} data={item} nowMs={nowMs} />
-                    </div>
-                )
-            })}
-        </div>
+        <>
+            <div className='grid grid-cols-2 gap-3'>
+                {data.data.map((item: Table, index: number) => {
+                    return (
+                        <div onClick={() => onCLickTable(item.tableNumber, item.documentId ?? "")} key={index}>
+                            <TableCard
+                                isChoosing={currentTable ?? ''}
+                                data={item}
+                                nowMs={nowMs}
+                                onEdit={handleEditTable}
+                            />
+                        </div>
+                    )
+                })}
+            </div>
+
+            <EditTableDrawer
+                table={editingTable}
+                open={openEditDrawer}
+                onOpenChange={(open) => {
+                    setOpenEditDrawer(open)
+                    if (!open) setEditingTable(null)
+                }}
+                onUpdated={handleUpdatedTable}
+            />
+        </>
     )
 }
 

@@ -53,6 +53,14 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import ListCategory from "./list-tables/list-category";
 import { toast } from "sonner";
 import { formatElapsedDuration } from "@/lib/format-duration";
@@ -78,6 +86,11 @@ type ReceiptSnapshot = {
   paidAmount: number;
   changeAmount: number;
   totalInWords: string;
+};
+
+type PendingLastItemRemoval = {
+  orderItemId: string;
+  dishName: string;
 };
 
 const RECEIPT_PROFILE = {
@@ -201,6 +214,10 @@ const ListMealsTable = () => {
   const [quantityDrafts, setQuantityDrafts] = useState<Record<string, string>>(
     {},
   );
+  const [pendingLastItemRemoval, setPendingLastItemRemoval] =
+    useState<PendingLastItemRemoval | null>(null);
+  const [isResettingTableAfterLastItemRemoval, setIsResettingTableAfterLastItemRemoval] =
+    useState(false);
   const debounceTimersRef = useRef<
     Record<string, ReturnType<typeof setTimeout>>
   >({});
@@ -319,11 +336,7 @@ const ListMealsTable = () => {
       pendingUpdates.map(async ([orderItemId, quantity]) => {
         if (quantity <= 0) {
           await deleteOrderItem(orderItemId);
-          setOptimisticQuantities((prev) => {
-            const next = { ...prev };
-            delete next[orderItemId];
-            return next;
-          });
+          clearOptimisticQuantity(orderItemId);
           return;
         }
 
@@ -355,11 +368,7 @@ const ListMealsTable = () => {
       try {
         if (quantityToSync <= 0) {
           await deleteOrderItem(orderItemId);
-          setOptimisticQuantities((prev) => {
-            const next = { ...prev };
-            delete next[orderItemId];
-            return next;
-          });
+          clearOptimisticQuantity(orderItemId);
           return;
         }
 
@@ -368,11 +377,7 @@ const ListMealsTable = () => {
           quantity: quantityToSync,
         });
       } catch {
-        setOptimisticQuantities((prev) => {
-          const next = { ...prev };
-          delete next[orderItemId];
-          return next;
-        });
+        clearOptimisticQuantity(orderItemId);
         toast.error("Cập nhật số lượng thất bại", {
           description: "Dữ liệu sẽ được tải lại từ máy chủ.",
         });
@@ -390,6 +395,80 @@ const ListMealsTable = () => {
     });
   };
 
+  const clearOptimisticQuantity = (orderItemId: string) => {
+    setOptimisticQuantities((prev) => {
+      if (prev[orderItemId] === undefined) return prev;
+      const next = { ...prev };
+      delete next[orderItemId];
+      return next;
+    });
+  };
+
+  const shouldConfirmRemovingLastItem = (
+    orderItemId: string,
+    nextQuantity: number,
+  ) => {
+    if (nextQuantity > 0) return false;
+    if (displayedOrderItems.length !== 1) return false;
+
+    const lastOrderItemId = getOrderItemDocumentId(displayedOrderItems[0]);
+    return Boolean(lastOrderItemId && lastOrderItemId === orderItemId);
+  };
+
+  const resetCurrentTableSession = async () => {
+    if (currentOrderRecord?.documentId) {
+      await updateOrderStatus({
+        id: currentOrderRecord.documentId,
+        order_status: "empty",
+        is_paid: false,
+        total_amount: 0,
+        paid_amount: 0,
+        change_amount: 0,
+      });
+    }
+
+    if (currentTableId) {
+      await updateTableStatus({
+        table_id: currentTableId,
+        table_status: "Empty",
+        occupied_since: null,
+        last_cleared_at: new Date().toISOString(),
+      });
+    }
+  };
+
+  const handleConfirmRemoveLastItem = async () => {
+    const pending = pendingLastItemRemoval;
+    if (!pending?.orderItemId) return;
+
+    setIsResettingTableAfterLastItemRemoval(true);
+    clearDebounceTimer(pending.orderItemId);
+    delete latestQuantityRef.current[pending.orderItemId];
+
+    try {
+      await deleteOrderItem(pending.orderItemId);
+      clearOptimisticQuantity(pending.orderItemId);
+      clearQuantityDraft(pending.orderItemId);
+
+      await resetCurrentTableSession();
+      await Promise.all([refetchOrderItems(), refetchCurrentOrder()]);
+
+      toast.success("Đã trả bàn về trạng thái trống.");
+    } catch (error) {
+      toast.error("Không thể xóa món cuối", {
+        description: error instanceof Error ? error.message : "Vui lòng thử lại.",
+      });
+    } finally {
+      setIsResettingTableAfterLastItemRemoval(false);
+      setPendingLastItemRemoval(null);
+    }
+  };
+
+  const handleCloseRemoveLastItemDialog = () => {
+    if (isResettingTableAfterLastItemRemoval) return;
+    setPendingLastItemRemoval(null);
+  };
+
   const setLocalQuantity = (item: OrderItem, nextQuantity: number) => {
     const orderItemId = getOrderItemDocumentId(item);
     if (!orderItemId) {
@@ -398,6 +477,17 @@ const ListMealsTable = () => {
     }
 
     const sanitizedQuantity = Math.max(0, Math.floor(nextQuantity));
+
+    if (shouldConfirmRemovingLastItem(orderItemId, sanitizedQuantity)) {
+      clearDebounceTimer(orderItemId);
+      delete latestQuantityRef.current[orderItemId];
+      clearQuantityDraft(orderItemId);
+      setPendingLastItemRemoval({
+        orderItemId,
+        dishName: getDishName(item.dish_id) || "món ăn này",
+      });
+      return;
+    }
 
     setOptimisticQuantities((prev) => ({
       ...prev,
@@ -570,6 +660,8 @@ const ListMealsTable = () => {
   useEffect(() => {
     setOptimisticQuantities({});
     setQuantityDrafts({});
+    setPendingLastItemRemoval(null);
+    setIsResettingTableAfterLastItemRemoval(false);
     latestQuantityRef.current = {};
     Object.keys(debounceTimersRef.current).forEach(clearDebounceTimer);
   }, [currentTableId]);
@@ -1468,6 +1560,48 @@ const ListMealsTable = () => {
           </section>
         ) : null}
       </div>
+
+      <Dialog
+        open={Boolean(pendingLastItemRemoval)}
+        onOpenChange={(open) => {
+          if (open) return;
+          handleCloseRemoveLastItemDialog();
+        }}
+      >
+        <DialogContent className="border-[#ead7c0] bg-white sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-[#4a2f18]">
+              Xóa món cuối khỏi bàn?
+            </DialogTitle>
+            <DialogDescription className="text-[#7a5b3a]">
+              Nếu xác nhận, món{" "}
+              <span className="font-semibold text-[#5b3d20]">
+                {pendingLastItemRemoval?.dishName}
+              </span>{" "}
+              sẽ bị gỡ và bàn sẽ trở về trạng thái trống như bàn mới.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCloseRemoveLastItemDialog}
+              disabled={isResettingTableAfterLastItemRemoval}
+              className="border-[#e0c9ad] bg-white text-[#6f4b2a] hover:bg-[#fff7ed] hover:text-[#6f4b2a]"
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              onClick={handleConfirmRemoveLastItem}
+              disabled={isResettingTableAfterLastItemRemoval}
+              className="bg-secondary text-white hover:bg-secondary/90 hover:text-white"
+            >
+              {isResettingTableAfterLastItemRemoval ? "Đang xử lý..." : "Xác nhận"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <style jsx global>{`
         .pos-print-receipt-root {

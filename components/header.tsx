@@ -14,13 +14,13 @@ const Header = ({ page, breadcrumbList }: Header) => {
         <div className='dashboard-header grid grid-cols-4 gap-8 justify-center items-center'>
             <div className='flex flex-col justify-start text-start col-span-2'>
                 <h2 className='text-lg font-semibold'>{page}</h2>
-                <div className='text-zinc-700'>{!breadcrumbList ? "Welcome to Dashboard" : <BreadCrumb pages={breadcrumbList} />}</div>
+                <div className='text-zinc-700'>{!breadcrumbList ? "Tổng quan hoạt động hôm nay" : <BreadCrumb pages={breadcrumbList} />}</div>
             </div>
             <div className='relative'>
                 <button className='absolute right-2' type='submit'>
                     <div className='p-2 rounded-full'>
                         <svg
-                            className="w-5 h-5 text-white"
+                            className="w-5 h-5 text-[#9b7757]"
                             fill="none"
                             stroke="currentColor"
                             strokeWidth={2}
@@ -30,7 +30,7 @@ const Header = ({ page, breadcrumbList }: Header) => {
                         </svg>
                     </div>
                 </button>
-                <Input type='text' placeholder='Search' className='border-none rounded-lg bg-white inset-shadow-xs' />
+                <Input type='text' placeholder='Tìm kiếm' className='border-none rounded-lg bg-white inset-shadow-xs' />
             </div>
             <div className='flex flex-row gap-2 justify-between items-center'>
                 <div className='bg-white p-2 h-[36px] w-[36px] flex items-center justify-center rounded-lg'>

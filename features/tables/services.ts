@@ -18,6 +18,20 @@ export const createTable = async (payload: TablePayload) => {
   return response.data
 }
 
+export const updateTable = async (
+  documentId: string,
+  payload: Partial<TablePayload>,
+) => {
+  if (!documentId) {
+    throw new Error("Không tìm thấy documentId của bàn để cập nhật.")
+  }
+
+  const response = await axios.put(`/api/tables/${documentId}`, {
+    data: payload,
+  })
+  return response.data
+}
+
 export const updateTableStatus = async ({
   table_id,
   table_status,

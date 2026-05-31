@@ -1,20 +1,23 @@
 import { Table } from '@/features/tables/type'
-import React, { } from 'react'
+import React from 'react'
 import {
     Card,
     CardHeader,
     CardTitle,
 } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { cn } from '@/lib/utils'
 import { formatElapsedDuration } from '@/lib/format-duration'
+import { PencilLine } from 'lucide-react'
 
 type TablesProps = {
     data: Table,
     isChoosing: string
     nowMs: number
+    onEdit?: (table: Table) => void
 }
 
-const TableCard = ({ data, isChoosing, nowMs }: TablesProps) => {
+const TableCard = ({ data, isChoosing, nowMs, onEdit }: TablesProps) => {
     const isSelected = data.tableNumber === isChoosing
 
     const statusConfig: Record<string, { label: string; tone: string; dot: string }> = {
@@ -64,10 +67,26 @@ const TableCard = ({ data, isChoosing, nowMs }: TablesProps) => {
             <CardHeader className='space-y-2 p-3'>
                 <div className='flex items-start justify-between gap-2'>
                     <CardTitle className='text-base font-bold text-[#3f2a18]'>#{data.tableNumber}</CardTitle>
-                    <span className={cn('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold', status.tone)}>
-                        <span className={cn('h-1.5 w-1.5 rounded-full', status.dot)} />
-                        {status.label}
-                    </span>
+                    <div className='flex items-center gap-1'>
+                        <span className={cn('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold', status.tone)}>
+                            <span className={cn('h-1.5 w-1.5 rounded-full', status.dot)} />
+                            {status.label}
+                        </span>
+                        {isSelected ? (
+                            <Button
+                                type='button'
+                                size='icon'
+                                variant='ghost'
+                                className='h-7 w-7 rounded-full text-[#7b532b] hover:bg-[#f9ece0]'
+                                onClick={(event) => {
+                                    event.stopPropagation()
+                                    onEdit?.(data)
+                                }}
+                            >
+                                <PencilLine className='h-3.5 w-3.5' />
+                            </Button>
+                        ) : null}
+                    </div>
                 </div>
 
                 <p className='line-clamp-1 text-sm font-medium text-[#6f4f30]'>{tableName}</p>

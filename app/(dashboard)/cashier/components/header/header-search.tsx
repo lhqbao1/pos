@@ -100,6 +100,19 @@ const HeaderSearch = ({ page, breadcrumbList }: HeaderSearch) => {
             return
         }
 
+        const isVipTable =
+            currentTableRecord?.type !== undefined
+                ? currentTableRecord.type === "Vip"
+                : currentTableRecord?.tableNumber?.toLowerCase().includes("vip")
+
+        const resolveDishPriceAtOrder = (normalPrice: number, vipDishPrice: number) => {
+            if (isVipTable) {
+                return vipDishPrice > 0 ? vipDishPrice : normalPrice
+            }
+
+            return normalPrice > 0 ? normalPrice : vipDishPrice
+        }
+
         // Check if the current table is available for use
         if (currentTableRecord.table_status === "Empty") {
             const sessionStartedAt =
@@ -129,13 +142,12 @@ const HeaderSearch = ({ page, breadcrumbList }: HeaderSearch) => {
                 },
                 {
                     onSuccess: (order) => {
-                        const tableName = currentTableRecord.tableNumber;
                         // Create order item after creating order
                         createOrderItem({
                             dish_id: dishId ?? '',
                             order_id: order.data.documentId,
                             quantity: 1,
-                            price_at_order: tableName.includes('vip') ? (price ?? 0) : (vipPrice ?? 0), // Ensure price is a number, fallback to 0 if undefined
+                            price_at_order: resolveDishPriceAtOrder(price ?? 0, vipPrice ?? 0),
                         })
                         toast.success("Gọi món thành công", {
                             description: (
@@ -189,7 +201,7 @@ const HeaderSearch = ({ page, breadcrumbList }: HeaderSearch) => {
                         dish_id: dishId ?? '',
                         order_id: currentOrder?.documentId,
                         quantity: 1,
-                        price_at_order: currentTableRecord.tableNumber.includes('vip') ? (price ?? 0) : (vipPrice ?? 0), // Ensure price is a number, fallback to 0 if undefined
+                        price_at_order: resolveDishPriceAtOrder(price ?? 0, vipPrice ?? 0),
                     },
                     {
                         onSuccess: () => {
