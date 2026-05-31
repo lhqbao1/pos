@@ -16,17 +16,25 @@ type MealsListProps = {
 }
 
 const MealCart = ({ data, actions }: MealsListProps) => {
-    const imageUrl = resolveMediaUrl(data.image?.url) || '/placeholder-image.jpg'
+    const placeholderImage = '/category-food-placeholder.svg'
+    const [imageSrc, setImageSrc] = React.useState(
+        resolveMediaUrl(data.image?.url) || placeholderImage
+    )
+
+    React.useEffect(() => {
+        setImageSrc(resolveMediaUrl(data.image?.url) || placeholderImage)
+    }, [data.image?.url])
 
     return (
         <Card className='group gap-3 overflow-hidden rounded-2xl border border-[#efe1d1] bg-white/95 p-3 shadow-[0_8px_20px_rgba(149,103,61,0.08)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_14px_28px_rgba(149,103,61,0.16)]'>
             <CardContent className='relative p-0'>
                 <Image
-                    src={imageUrl}
+                    src={imageSrc}
                     width={300}
                     height={300}
                     alt={data.name}
                     className='h-[170px] w-full rounded-xl object-cover transition-transform duration-300 group-hover:scale-105'
+                    onError={() => setImageSrc(placeholderImage)}
                 />
                 {data.category?.name ? (
                     <span className='absolute left-2 top-2 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur'>

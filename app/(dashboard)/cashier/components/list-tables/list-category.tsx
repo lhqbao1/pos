@@ -1,7 +1,18 @@
 "use client";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useGetAllCategories } from "@/features/categories/hook";
+import {
+  useDeleteCategory,
+  useGetAllCategories,
+} from "@/features/categories/hook";
 import { useGetDishesByCategory } from "@/features/dish/hook";
 import React, { useRef, useState } from "react";
 import {
@@ -17,7 +28,10 @@ import { Dish } from "@/features/dish/type";
 import {
   AlertCircle,
   ArrowLeft,
+  Loader2,
+  PencilLine,
   RefreshCcw,
+  Trash2,
   UtensilsCrossed,
 } from "lucide-react";
 import { formattedNumber } from "@/lib/format-vnd";
@@ -37,10 +51,13 @@ import {
 import { OrderItem } from "@/features/order-items/type";
 import { isOrderClosed } from "@/features/order/status";
 import { resolveMediaUrl } from "@/lib/media-url";
+import EditCategoryDrawer from "./edit-category-drawer";
 
 const ListCategory = () => {
   const [selectedCategory, setSelectedCategory] = useState("");
   const tableSessionStartRef = useRef<Record<string, string>>({});
+  const [pendingDeleteCategory, setPendingDeleteCategory] =
+    useState<Category | null>(null);
 
   const [currentTable] = useAtom(tableNumberAtom);
 
@@ -88,6 +105,8 @@ const ListCategory = () => {
 
   // Activate update order item quantity
   const { mutate: updateOrderItemQuantity } = useUpdateOrderItemQuantity();
+  const { mutateAsync: deleteCategory, isLoading: isDeletingCategory } =
+    useDeleteCategory();
 
   const categorySkeleton = (
     <div className="grid grid-cols-6 justify-between gap-5">
@@ -152,6 +171,29 @@ const ListCategory = () => {
 
   const handleClickCategoryCard = (categoryName: string) => {
     setSelectedCategory(categoryName);
+  };
+
+  const handleConfirmDeleteCategory = async () => {
+    const category = pendingDeleteCategory;
+    if (!category?.documentId) {
+      toast.error("Không tìm thấy mã danh mục để xoá.");
+      return;
+    }
+
+    try {
+      await deleteCategory(category.documentId);
+      toast.success("Xoá danh mục thành công.");
+
+      if (selectedCategory === category.name) {
+        setSelectedCategory("");
+      }
+
+      setPendingDeleteCategory(null);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Xoá danh mục thất bại.";
+      toast.error(message);
+    }
   };
 
   const getOrderItemDocumentId = (item: OrderItem) =>
@@ -421,7 +463,7 @@ const ListCategory = () => {
           {dishesData.data.map((dish: Dish, index: number) => {
             const imageUrl =
               resolveMediaUrl(dish?.image?.url) ||
-              "https://lh3.googleusercontent.com/gps-cs-s/AC9h4np2nCF2_67uvFaXBDH4da5xhtg5FUTqQzLXTk7Ugj2grs9pD0MxUBvct5WKi8tjuF8et82JOJYVb4qlwy_v2HOge4exFAmd4dI8ClzetLa3ltyYXATUHpnuocg3bZ44BhHSJ2hl=s1360-w1360-h1020-rw";
+              "/category-food-placeholder.svg";
 
             return (
               <Card
@@ -448,7 +490,7 @@ const ListCategory = () => {
                 </CardHeader>
                 <CardFooter className="px-3 pb-4 pt-0">
                   <p className="text-lg font-bold text-secondary">
-                    {formattedNumber(dish?.price ?? 0)} VND
+                    {formattedNumber(dish?.price ?? 0)}
                   </p>
                 </CardFooter>
               </Card>
@@ -460,31 +502,116 @@ const ListCategory = () => {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-      {data.data.map((item: Category, index: number) => {
-        return (
-          <Card
-            key={index}
-            onClick={() => handleClickCategoryCard(item.name)}
-            className={`cursor-pointer pb-0 gap-2 pt-3 hover:scale-105 transition-transform duration-400 hover:shadow-lg`}
-          >
-            <CardHeader className="py-0 text-center uppercase font-semibold">
-              {item.name}
-            </CardHeader>
-            <CardContent className="p-0">
-              <Image
-                src={resolveMediaUrl(item?.image?.url) || "/category-food-placeholder.svg"}
-                width={200}
-                height={200}
-                alt={item.name}
-                className="w-full h-[150px] rounded-bl-xl rounded-br-xl object-cover"
-              />
-            </CardContent>
-          </Card>
-        );
-      })}
-      {/* Show dishes */}
-    </div>
+    <>
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+        {data.data.map((item: Category) => {
+          return (
+            <Card
+              key={item.documentId ?? item.id}
+              onClick={() => handleClickCategoryCard(item.name)}
+              className="cursor-pointer gap-2 pb-0 pt-3 transition-transform duration-400 hover:scale-105 hover:shadow-lg"
+            >
+              <CardHeader className="flex flex-row items-center justify-between gap-2 py-0">
+                <span className="line-clamp-1 text-left text-sm font-semibold uppercase text-[#3f2b16]">
+                  {item.name}
+                </span>
+                <div
+                  className="flex items-center gap-1"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <EditCategoryDrawer
+                    category={item}
+                    trigger={
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7 rounded-full text-[#7b532b] hover:bg-[#f9ece0]"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        <PencilLine className="h-3.5 w-3.5" />
+                      </Button>
+                    }
+                  />
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7 rounded-full text-red-600 hover:bg-red-50"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setPendingDeleteCategory(item);
+                    }}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <Image
+                  src={
+                    resolveMediaUrl(item?.image?.url) ||
+                    "/category-food-placeholder.svg"
+                  }
+                  width={200}
+                  height={200}
+                  alt={item.name}
+                  className="h-[150px] w-full rounded-bl-xl rounded-br-xl object-cover"
+                />
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      <Dialog
+        open={Boolean(pendingDeleteCategory)}
+        onOpenChange={(open) => {
+          if (!open && !isDeletingCategory) {
+            setPendingDeleteCategory(null);
+          }
+        }}
+      >
+        <DialogContent className="border-[#ead8c4] bg-white sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-[#4a2f18]">
+              Xác nhận xoá danh mục
+            </DialogTitle>
+            <DialogDescription className="text-[#7a5b3a]">
+              {pendingDeleteCategory
+                ? `Bạn có chắc muốn xoá danh mục "${pendingDeleteCategory.name}"? Hành động này không thể hoàn tác.`
+                : "Xác nhận xoá danh mục."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              className="border-[#e3cfb8] bg-white text-[#6f4b2a] hover:bg-[#fff4e5] hover:text-[#6f4b2a]"
+              onClick={() => setPendingDeleteCategory(null)}
+              disabled={isDeletingCategory}
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              className="bg-red-600 text-white hover:bg-red-700 hover:text-white"
+              onClick={handleConfirmDeleteCategory}
+              disabled={isDeletingCategory}
+            >
+              {isDeletingCategory ? (
+                <span className="inline-flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Đang xoá...
+                </span>
+              ) : (
+                "Xác nhận xoá"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 

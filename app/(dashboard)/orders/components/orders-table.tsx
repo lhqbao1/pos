@@ -499,11 +499,11 @@ const OrdersTable = () => {
 
     const columns = useMemo<ColumnDef<Order>[]>(() => [
         {
-            accessorKey: "documentId",
-            header: "Mã hóa đơn",
+            accessorKey: "customer_name",
+            header: "Tên khách hàng",
             cell: ({ row }) => (
                 <div className='max-w-[240px] truncate font-semibold text-[#3f2b16]'>
-                    {resolveOrderCode(row.original)}
+                    {row.original.customer_name?.trim() || "Khách lẻ"}
                 </div>
             ),
         },
