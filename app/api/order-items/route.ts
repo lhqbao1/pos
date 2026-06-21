@@ -13,17 +13,51 @@ import { toRouteErrorResponse } from "@/lib/server/route-error";
 
 export const runtime = "nodejs";
 
+type BackendRecord = Record<string, any>;
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const client = createBackendServerClient();
+    const tableNumber = searchParams.get(
+      "filters[order_id][table_id][tableNumber][$eq]",
+    );
 
-    const response = await client.get("/api/order-items", {
-      params: { page: 1, pageSize: 10000 },
+    const [response, ordersResponse] = await Promise.all([
+      client.get("/api/order-items", {
+        params: { page: 1, pageSize: 10000 },
+      }),
+      tableNumber
+        ? client.get("/api/orders", {
+            params: { page: 1, pageSize: 10000 },
+          })
+        : Promise.resolve(null),
+    ]);
+
+    const rawItems: BackendRecord[] = Array.isArray(response.data?.data)
+      ? response.data.data
+      : [];
+    const rawOrders: BackendRecord[] = Array.isArray(ordersResponse?.data?.data)
+      ? ordersResponse.data.data
+      : [];
+    const ordersByDocumentId = new Map(
+      rawOrders.map((order) => [order.documentId, order]),
+    );
+    const ordersById = new Map(rawOrders.map((order) => [order.id, order]));
+    const items = rawItems.map((item) => {
+      const completeOrder =
+        ordersByDocumentId.get(item.order?.documentId) ??
+        ordersById.get(item.order?.id);
+
+      return toLegacyOrderItem(
+        completeOrder
+          ? {
+              ...item,
+              order: completeOrder,
+            }
+          : item,
+      );
     });
-
-    const rawItems = Array.isArray(response.data?.data) ? response.data.data : [];
-    const items = rawItems.map(toLegacyOrderItem);
     const filtered = filterOrderItems(items, searchParams);
     const { data, total } = sortAndPaginate(filtered, searchParams);
 

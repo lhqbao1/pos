@@ -14,9 +14,10 @@ import {
   CardFooter,
   CardHeader,
 } from "@/components/ui/card";
-import { ListOrdered, Minus, Plus, Utensils } from "lucide-react";
+import { ListOrdered, Minus, Plus, Trash2, Utensils } from "lucide-react";
 import { formattedNumber } from "@/lib/format-vnd";
 import {
+  CellContext,
   ColumnDef,
   flexRender,
   getCoreRowModel,
@@ -91,6 +92,85 @@ type ReceiptSnapshot = {
 type PendingLastItemRemoval = {
   orderItemId: string;
   dishName: string;
+};
+
+type OrderQuantityTableMeta = {
+  setQuantity: (item: OrderItem, quantity: number) => void;
+  adjustQuantity: (item: OrderItem, delta: number) => void;
+};
+
+const QuantityCell = ({ row, table }: CellContext<OrderItem, unknown>) => {
+  const item = row.original;
+  const quantity = item.quantity;
+  const [draft, setDraft] = useState(String(quantity));
+  const isFocusedRef = useRef(false);
+  const skipBlurCommitRef = useRef(false);
+  const meta = table.options.meta as OrderQuantityTableMeta | undefined;
+
+  useEffect(() => {
+    if (!isFocusedRef.current) setDraft(String(quantity));
+  }, [quantity]);
+
+  const commitDraft = () => {
+    const parsedQuantity = Number.parseInt(draft, 10);
+    if (!draft || Number.isNaN(parsedQuantity)) {
+      setDraft(String(quantity));
+      return;
+    }
+
+    const nextQuantity = Math.max(0, parsedQuantity);
+    setDraft(String(nextQuantity));
+    meta?.setQuantity(item, nextQuantity);
+  };
+
+  return (
+    <div className="flex items-center justify-center gap-2">
+      <Button
+        type="button"
+        className="h-8 w-8 rounded-full bg-secondary p-0 text-white hover:bg-secondary/90 hover:text-white"
+        onClick={() => meta?.adjustQuantity(item, -1)}
+      >
+        <Minus className="h-3 w-3 font-bold text-white stroke-3" />
+      </Button>
+      <input
+        type="text"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        value={draft}
+        onFocus={() => {
+          isFocusedRef.current = true;
+        }}
+        onChange={(event) => {
+          setDraft(event.target.value.replace(/[^\d]/g, ""));
+        }}
+        onBlur={() => {
+          isFocusedRef.current = false;
+          if (skipBlurCommitRef.current) {
+            skipBlurCommitRef.current = false;
+            return;
+          }
+          commitDraft();
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") event.currentTarget.blur();
+          if (event.key === "Escape") {
+            skipBlurCommitRef.current = true;
+            setDraft(String(quantity));
+            event.currentTarget.blur();
+          }
+        }}
+        className="h-8 w-14 rounded-md border border-[#e4d1ba] bg-white text-center text-base font-semibold text-[#4a2f18] outline-none transition focus:border-secondary focus:ring-2 focus:ring-secondary/20"
+        aria-label="Nhập số lượng món"
+      />
+      <Button
+        type="button"
+        className="h-8 w-8 rounded-full bg-secondary p-0 text-white hover:bg-secondary/90 hover:text-white"
+        onClick={() => meta?.adjustQuantity(item, 1)}
+      >
+        <Plus className="h-3.5 w-3.5 font-bold text-white stroke-3" />
+      </Button>
+    </div>
+  );
 };
 
 const RECEIPT_PROFILE = {
@@ -211,13 +291,12 @@ const ListMealsTable = () => {
   const [optimisticQuantities, setOptimisticQuantities] = useState<
     Record<string, number>
   >({});
-  const [quantityDrafts, setQuantityDrafts] = useState<Record<string, string>>(
-    {},
-  );
   const [pendingLastItemRemoval, setPendingLastItemRemoval] =
     useState<PendingLastItemRemoval | null>(null);
   const [isResettingTableAfterLastItemRemoval, setIsResettingTableAfterLastItemRemoval] =
     useState(false);
+  const [openClearTableDialog, setOpenClearTableDialog] = useState(false);
+  const [isClearingTableData, setIsClearingTableData] = useState(false);
   const debounceTimersRef = useRef<
     Record<string, ReturnType<typeof setTimeout>>
   >({});
@@ -305,13 +384,12 @@ const ListMealsTable = () => {
     });
   }, [allOrderItems, currentOrderDocumentId]);
   const currentTableRecord = currentTableData?.data?.[0];
-  const occupiedSince =
-    currentTableRecord?.occupied_since ??
-    currentOrderRecord?.opened_at?.toString() ??
-    null;
-  const isTableUsing =
-    currentTableRecord?.table_status === "Using" ||
-    currentOrderRecord?.order_status === "active";
+  const isTableUsing = currentTableRecord?.table_status === "Using";
+  const occupiedSince = isTableUsing
+    ? currentTableRecord?.occupied_since ??
+      currentOrderRecord?.opened_at?.toString() ??
+      null
+    : null;
   const usingDuration = isTableUsing
     ? formatElapsedDuration(occupiedSince, nowMs)
     : null;
@@ -386,15 +464,6 @@ const ListMealsTable = () => {
     }, 500);
   };
 
-  const clearQuantityDraft = (orderItemId: string) => {
-    setQuantityDrafts((prev) => {
-      if (prev[orderItemId] === undefined) return prev;
-      const next = { ...prev };
-      delete next[orderItemId];
-      return next;
-    });
-  };
-
   const clearOptimisticQuantity = (orderItemId: string) => {
     setOptimisticQuantities((prev) => {
       if (prev[orderItemId] === undefined) return prev;
@@ -448,8 +517,6 @@ const ListMealsTable = () => {
     try {
       await deleteOrderItem(pending.orderItemId);
       clearOptimisticQuantity(pending.orderItemId);
-      clearQuantityDraft(pending.orderItemId);
-
       await resetCurrentTableSession();
       await Promise.all([refetchOrderItems(), refetchCurrentOrder()]);
 
@@ -469,6 +536,49 @@ const ListMealsTable = () => {
     setPendingLastItemRemoval(null);
   };
 
+  const handleConfirmClearTableData = async () => {
+    if (!currentTableId) {
+      toast.error("Không tìm thấy bàn cần xóa dữ liệu.");
+      return;
+    }
+
+    setIsClearingTableData(true);
+    Object.keys(debounceTimersRef.current).forEach(clearDebounceTimer);
+    latestQuantityRef.current = {};
+
+    try {
+      const orderItemIds = baseOrderItems
+        .map((item) => getOrderItemDocumentId(item))
+        .filter((id): id is string => Boolean(id));
+
+      await Promise.all(orderItemIds.map((id) => deleteOrderItem(id)));
+
+      if (currentOrderRecord?.documentId) {
+        await updateOrderCustomerName({
+          id: currentOrderRecord.documentId,
+          customer_name: "",
+        });
+      }
+
+      await resetCurrentTableSession();
+
+      setOptimisticQuantities({});
+      setCustomerNameInput("");
+      setPendingLastItemRemoval(null);
+      setActiveTab("ordered");
+
+      await Promise.all([refetchOrderItems(), refetchCurrentOrder()]);
+      toast.success("Đã xóa toàn bộ dữ liệu và trả bàn về trạng thái trống.");
+      setOpenClearTableDialog(false);
+    } catch (error) {
+      toast.error("Không thể xóa dữ liệu bàn", {
+        description: error instanceof Error ? error.message : "Vui lòng thử lại.",
+      });
+    } finally {
+      setIsClearingTableData(false);
+    }
+  };
+
   const setLocalQuantity = (item: OrderItem, nextQuantity: number) => {
     const orderItemId = getOrderItemDocumentId(item);
     if (!orderItemId) {
@@ -481,7 +591,6 @@ const ListMealsTable = () => {
     if (shouldConfirmRemovingLastItem(orderItemId, sanitizedQuantity)) {
       clearDebounceTimer(orderItemId);
       delete latestQuantityRef.current[orderItemId];
-      clearQuantityDraft(orderItemId);
       setPendingLastItemRemoval({
         orderItemId,
         dishName: getDishName(item.dish_id) || "món ăn này",
@@ -510,7 +619,6 @@ const ListMealsTable = () => {
       item.quantity;
     const nextQuantity = Math.max(0, currentQuantity + delta);
 
-    clearQuantityDraft(orderItemId);
     setLocalQuantity(item, nextQuantity);
   };
 
@@ -634,34 +742,11 @@ const ListMealsTable = () => {
   }, [baseOrderItems]);
 
   useEffect(() => {
-    setQuantityDrafts((prev) => {
-      if (!Object.keys(prev).length) return prev;
-
-      const validOrderItemIds = new Set(
-        baseOrderItems
-          .map((item) => getOrderItemDocumentId(item))
-          .filter((id): id is string => Boolean(id)),
-      );
-
-      let changed = false;
-      const next = { ...prev };
-
-      Object.keys(next).forEach((id) => {
-        if (!validOrderItemIds.has(id)) {
-          delete next[id];
-          changed = true;
-        }
-      });
-
-      return changed ? next : prev;
-    });
-  }, [baseOrderItems]);
-
-  useEffect(() => {
     setOptimisticQuantities({});
-    setQuantityDrafts({});
     setPendingLastItemRemoval(null);
     setIsResettingTableAfterLastItemRemoval(false);
+    setOpenClearTableDialog(false);
+    setIsClearingTableData(false);
     latestQuantityRef.current = {};
     Object.keys(debounceTimersRef.current).forEach(clearDebounceTimer);
   }, [currentTableId]);
@@ -688,100 +773,7 @@ const ListMealsTable = () => {
     {
       accessorKey: "quantity",
       header: "Số lượng",
-      cell: ({ row }) => {
-        const orderItemId = getOrderItemDocumentId(row.original);
-        const quantity = row.original.quantity;
-        const quantityInputValue =
-          orderItemId && quantityDrafts[orderItemId] !== undefined
-            ? quantityDrafts[orderItemId]
-            : String(quantity);
-
-        const handleIncrease = () => {
-          updateLocalQuantity(row.original, 1);
-        };
-
-        const handleDecrease = () => {
-          updateLocalQuantity(row.original, -1);
-        };
-
-        const handleQuantityInputChange = (
-          event: React.ChangeEvent<HTMLInputElement>,
-        ) => {
-          if (!orderItemId) return;
-
-          const nextValue = event.target.value.replace(/[^\d]/g, "");
-          setQuantityDrafts((prev) => ({ ...prev, [orderItemId]: nextValue }));
-
-          if (!nextValue) return;
-
-          const parsedQuantity = Number.parseInt(nextValue, 10);
-          if (!Number.isNaN(parsedQuantity)) {
-            setLocalQuantity(row.original, parsedQuantity);
-          }
-        };
-
-        const handleQuantityInputBlur = () => {
-          if (!orderItemId) return;
-
-          const draftValue = quantityDrafts[orderItemId];
-          if (draftValue === undefined) return;
-
-          if (!draftValue) {
-            clearQuantityDraft(orderItemId);
-            return;
-          }
-
-          const parsedQuantity = Number.parseInt(draftValue, 10);
-          if (!Number.isNaN(parsedQuantity)) {
-            setLocalQuantity(row.original, parsedQuantity);
-          }
-
-          clearQuantityDraft(orderItemId);
-        };
-
-        const handleQuantityInputKeyDown = (
-          event: React.KeyboardEvent<HTMLInputElement>,
-        ) => {
-          if (!orderItemId) return;
-
-          if (event.key === "Enter") {
-            event.currentTarget.blur();
-          }
-
-          if (event.key === "Escape") {
-            clearQuantityDraft(orderItemId);
-            event.currentTarget.blur();
-          }
-        };
-
-        return (
-          <div className="flex justify-center items-center gap-2">
-            <Button
-              className="h-8 w-8 rounded-full bg-secondary p-0 text-white hover:bg-secondary/90 hover:text-white"
-              onClick={handleDecrease}
-            >
-              <Minus className="h-3 w-3 font-bold text-white stroke-3" />
-            </Button>
-            <input
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              value={quantityInputValue}
-              onChange={handleQuantityInputChange}
-              onBlur={handleQuantityInputBlur}
-              onKeyDown={handleQuantityInputKeyDown}
-              className="h-8 w-14 rounded-md border border-[#e4d1ba] bg-white text-center text-base font-semibold text-[#4a2f18] outline-none transition focus:border-secondary focus:ring-2 focus:ring-secondary/20"
-              aria-label="Nhập số lượng món"
-            />
-            <Button
-              className="h-8 w-8 rounded-full bg-secondary p-0 text-white hover:bg-secondary/90 hover:text-white"
-              onClick={() => handleIncrease()}
-            >
-              <Plus className="h-3.5 w-3.5 font-bold text-white stroke-3" />
-            </Button>
-          </div>
-        );
-      },
+      cell: QuantityCell,
     },
     {
       accessorKey: "price_at_order",
@@ -812,6 +804,10 @@ const ListMealsTable = () => {
     data: displayedOrderItems,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    meta: {
+      setQuantity: setLocalQuantity,
+      adjustQuantity: updateLocalQuantity,
+    } satisfies OrderQuantityTableMeta,
   });
 
   const handlePrintAndCheckout = async ({
@@ -1055,26 +1051,38 @@ const ListMealsTable = () => {
               </Button>
             </div>
           </div>
-          {activeTab === "ordered" ? (
-            <Button
-              type="button"
-              className="rounded-xl bg-primary px-4 text-primary-foreground hover:opacity-95"
-              onClick={() => setActiveTab("menu")}
-            >
-              <Utensils className="mr-2 h-4 w-4" />
-              Chọn món ăn
-            </Button>
-          ) : (
+          <div className="flex flex-col items-stretch gap-2">
+            {activeTab === "ordered" ? (
+              <Button
+                type="button"
+                className="rounded-xl bg-primary px-4 text-primary-foreground hover:opacity-95"
+                onClick={() => setActiveTab("menu")}
+              >
+                <Utensils className="mr-2 h-4 w-4" />
+                Chọn món ăn
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-xl border-[#e5d4bf] bg-white text-[#6f4b2a] hover:bg-[#fff7ed] hover:text-[#6f4b2a]"
+                onClick={() => setActiveTab("ordered")}
+              >
+                <ListOrdered className="mr-2 h-4 w-4" />
+                Xem món đã gọi
+              </Button>
+            )}
             <Button
               type="button"
               variant="outline"
-              className="rounded-xl border-[#e5d4bf] bg-white text-[#6f4b2a] hover:bg-[#fff7ed] hover:text-[#6f4b2a]"
-              onClick={() => setActiveTab("ordered")}
+              className="rounded-xl border-red-200 bg-white text-red-600 hover:bg-red-50 hover:text-red-700"
+              onClick={() => setOpenClearTableDialog(true)}
+              disabled={isClearingTableData}
             >
-              <ListOrdered className="mr-2 h-4 w-4" />
-              Xem món đã gọi
+              <Trash2 className="mr-2 h-4 w-4" />
+              Xóa dữ liệu bàn
             </Button>
-          )}
+          </div>
         </div>
 
         <div className="inline-flex w-fit rounded-xl border border-[#e7d6c3] bg-white p-1 shadow-sm">
@@ -1603,6 +1611,46 @@ const ListMealsTable = () => {
         </DialogContent>
       </Dialog>
 
+      <Dialog
+        open={openClearTableDialog}
+        onOpenChange={(open) => {
+          if (isClearingTableData) return;
+          setOpenClearTableDialog(open);
+        }}
+      >
+        <DialogContent className="border-[#ead7c0] bg-white sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-[#4a2f18]">
+              Xóa toàn bộ dữ liệu bàn?
+            </DialogTitle>
+            <DialogDescription className="text-[#7a5b3a]">
+              Tất cả món đang gọi và tên khách của bàn {currentTable} sẽ bị xóa.
+              Bàn sẽ trở về trạng thái trống và thời gian chỉ bắt đầu lại khi
+              thêm món mới.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpenClearTableDialog(false)}
+              disabled={isClearingTableData}
+              className="border-[#e0c9ad] bg-white text-[#6f4b2a] hover:bg-[#fff7ed] hover:text-[#6f4b2a]"
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              onClick={handleConfirmClearTableData}
+              disabled={isClearingTableData}
+              className="bg-secondary text-white hover:bg-secondary/90 hover:text-white"
+            >
+              {isClearingTableData ? "Đang xóa..." : "Xóa dữ liệu bàn"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <style jsx global>{`
         .pos-print-receipt-root {
           display: none;
@@ -1636,7 +1684,7 @@ const ListMealsTable = () => {
           margin: 0 auto;
           color: #0f172a;
           font-family: "Arial", sans-serif;
-          font-size: 12px;
+          font-size: 14px;
           line-height: 1.32;
         }
 
@@ -1644,7 +1692,7 @@ const ListMealsTable = () => {
           display: flex;
           justify-content: space-between;
           gap: 8px;
-          font-size: 10px;
+          font-size: 12px;
         }
 
         .pos-print-center {
@@ -1658,13 +1706,13 @@ const ListMealsTable = () => {
 
         .pos-print-store-line1 {
           font-weight: 700;
-          font-size: 19px;
+          font-size: 21px;
           letter-spacing: 0.01em;
         }
 
         .pos-print-store-line2 {
           font-weight: 800;
-          font-size: 33px;
+          font-size: 35px;
           line-height: 1;
           letter-spacing: 0.03em;
           margin: 2px 0 4px;
@@ -1677,7 +1725,7 @@ const ListMealsTable = () => {
 
         .pos-print-heading {
           font-weight: 800;
-          font-size: 15px;
+          font-size: 17px;
           margin-bottom: 2px !important;
           letter-spacing: 0.02em;
         }
@@ -1685,7 +1733,7 @@ const ListMealsTable = () => {
         .pos-print-time {
           margin: 2px 0 0;
           text-align: center;
-          font-size: 11px;
+          font-size: 13px;
         }
 
         .pos-print-customer {
@@ -1741,7 +1789,7 @@ const ListMealsTable = () => {
         .pos-print-item-price {
           display: block;
           margin-top: 1px;
-          font-size: 11px;
+          font-size: 13px;
           font-weight: 400;
         }
 
@@ -1759,7 +1807,7 @@ const ListMealsTable = () => {
         }
 
         .pos-print-summary .grand-total {
-          font-size: 14px;
+          font-size: 16px;
         }
 
         .pos-print-words {
@@ -1771,13 +1819,13 @@ const ListMealsTable = () => {
         .pos-print-thanks {
           margin: 10px 0 0;
           text-align: center;
-          font-size: 15px;
+          font-size: 17px;
         }
 
         .pos-print-note {
           margin: 8px 0 0;
           text-align: center;
-          font-size: 11px;
+          font-size: 13px;
           line-height: 1.3;
           font-style: italic;
         }

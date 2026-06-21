@@ -64,8 +64,18 @@ export class TablesService {
       where: { documentId },
       data: {
         ...input,
-        occupiedSince: input.occupiedSince ? new Date(input.occupiedSince) : undefined,
-        lastClearedAt: input.lastClearedAt ? new Date(input.lastClearedAt) : undefined,
+        occupiedSince:
+          input.occupiedSince === undefined
+            ? undefined
+            : input.occupiedSince === null
+              ? null
+              : new Date(input.occupiedSince),
+        lastClearedAt:
+          input.lastClearedAt === undefined
+            ? undefined
+            : input.lastClearedAt === null
+              ? null
+              : new Date(input.lastClearedAt),
       },
     });
   }

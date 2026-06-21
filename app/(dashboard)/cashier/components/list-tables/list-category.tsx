@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGetAllCategories } from "@/features/categories/hook";
 import { useGetDishesByCategory } from "@/features/dish/hook";
-import React, { useRef, useState } from "react";
+import React, { useState } from "react";
 import {
   Card,
   CardContent,
@@ -28,6 +28,7 @@ import {
   useUpdateTableStatus,
 } from "@/features/tables/hook";
 import { useCreateOrder, useGetOrderByTable } from "@/features/order/hook";
+import { Order } from "@/features/order/type";
 import { toast } from "sonner";
 import {
   useCreateOrderItem,
@@ -35,13 +36,10 @@ import {
   useUpdateOrderItemQuantity,
 } from "@/features/order-items/hook";
 import { OrderItem } from "@/features/order-items/type";
-import { isOrderClosed } from "@/features/order/status";
 import { resolveMediaUrl } from "@/lib/media-url";
 
 const ListCategory = () => {
   const [selectedCategory, setSelectedCategory] = useState("");
-  const tableSessionStartRef = useRef<Record<string, string>>({});
-
   const [currentTable] = useAtom(tableNumberAtom);
 
   // Fetch categories
@@ -184,19 +182,21 @@ const ListCategory = () => {
       return;
     }
 
-    //Get current order by table
-    const currentOrderIndex = orderByTableItems.length - 1;
-    const currentOrder =
-      currentOrderIndex >= 0 ? orderByTableItems[currentOrderIndex] : undefined;
+    const currentOrder = orderByTableItems
+      .filter((order: Order) => order.order_status === "active")
+      .sort((left: Order, right: Order) => {
+        const leftTime = new Date(
+          left.createdAt ?? left.opened_at ?? 0,
+        ).getTime();
+        const rightTime = new Date(
+          right.createdAt ?? right.opened_at ?? 0,
+        ).getTime();
+        return rightTime - leftTime;
+      })[0];
 
     //Check if table is empty or not, if yes change the status to Using
     if (currentTableRecord.table_status === "Empty") {
-      const sessionStartedAt =
-        currentTableRecord.occupied_since ??
-        tableSessionStartRef.current[currentTableRecord.documentId] ??
-        new Date().toISOString();
-
-      tableSessionStartRef.current[currentTableRecord.documentId] = sessionStartedAt;
+      const sessionStartedAt = new Date().toISOString();
 
       updateTableStatus({
         table_id: currentTableRecord.documentId,
@@ -206,10 +206,7 @@ const ListCategory = () => {
       });
     }
 
-    const shouldCreateNewOrder =
-      !currentOrder ||
-      currentOrder.order_status === "empty" ||
-      isOrderClosed(currentOrder.order_status);
+    const shouldCreateNewOrder = !currentOrder;
 
     //Check if order already exists for this table
     if (shouldCreateNewOrder) {
@@ -251,6 +248,12 @@ const ListCategory = () => {
       let currentOrderItem = {} as OrderItem;
 
       for (let i = 0; i < orderItemsByTable.length; i++) {
+        const itemOrderId =
+          typeof orderItemsByTable[i].order_id === "string"
+            ? orderItemsByTable[i].order_id
+            : orderItemsByTable[i].order_id?.documentId;
+        if (itemOrderId !== currentOrder.documentId) continue;
+
         const dishId =
           typeof orderItemsByTable[i].dish_id === "string"
             ? orderItemsByTable[i].dish_id

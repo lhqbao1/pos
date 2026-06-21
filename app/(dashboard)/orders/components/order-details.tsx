@@ -194,25 +194,25 @@ const renderReceiptHtml = (snapshot: ReceiptSnapshot) => {
         width: 76mm;
         margin: 0 auto;
         padding: 8px 4px 14px;
-        font-size: 12px;
+        font-size: 14px;
         line-height: 1.35;
       }
       .topline {
         display: flex;
         justify-content: space-between;
         gap: 8px;
-        font-size: 10px;
+        font-size: 12px;
       }
       .center { text-align: center; }
       .right { text-align: right; }
       .store-line1 {
         margin: 2px 0 0;
-        font-size: 19px;
+        font-size: 21px;
         font-weight: 700;
       }
       .store-line2 {
         margin: 0;
-        font-size: 31px;
+        font-size: 33px;
         line-height: 1;
         font-weight: 800;
       }
@@ -222,7 +222,7 @@ const renderReceiptHtml = (snapshot: ReceiptSnapshot) => {
         border-top: 1px dashed #444;
       }
       .heading {
-        font-size: 15px;
+        font-size: 17px;
         font-weight: 800;
       }
       table {
@@ -241,7 +241,7 @@ const renderReceiptHtml = (snapshot: ReceiptSnapshot) => {
       td.center, th.center { text-align: center; }
       td.right, th.right { text-align: right; }
       .name { font-weight: 600; }
-      .price { font-size: 11px; color: #525252; }
+      .price { font-size: 13px; color: #525252; }
       .summary {
         margin-top: 6px;
       }

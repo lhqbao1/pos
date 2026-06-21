@@ -25,7 +25,7 @@ import { useAtom } from 'jotai'
 import { toast } from 'sonner'
 import { useGetTableByTableNumber, useUpdateTableStatus } from '@/features/tables/hook'
 import { useCreateOrder, useGetOrderByTable } from '@/features/order/hook'
-import { isOrderClosed } from '@/features/order/status'
+import { Order } from '@/features/order/type'
 import { useCreateOrderItem, useGetOrderItemsWithTable, useUpdateOrderItemQuantity } from '@/features/order-items/hook'
 import { OrderItem } from '@/features/order-items/type'
 
@@ -38,7 +38,6 @@ interface HeaderSearch {
 const HeaderSearch = ({ page, breadcrumbList }: HeaderSearch) => {
     const [open, setOpen] = React.useState(false)
     const [value, setValue] = React.useState("")
-    const tableSessionStartRef = React.useRef<Record<string, string>>({})
     const { data: dishes } = useDishesQuery()
     // Import the atom to get the current table number
     const [currentTable] = useAtom(tableNumberAtom)
@@ -86,8 +85,13 @@ const HeaderSearch = ({ page, breadcrumbList }: HeaderSearch) => {
     const chooseDish = (dishName: string, dishId: string, price: number, vipPrice: number) => {
         setValue(dishName);
         setOpen(false);
-        const currentOrderIndex = orderByTableItems.length - 1
-        const currentOrder = currentOrderIndex >= 0 ? orderByTableItems[currentOrderIndex] : undefined
+        const currentOrder = orderByTableItems
+            .filter((order: Order) => order.order_status === "active")
+            .sort((left: Order, right: Order) => {
+                const leftTime = new Date(left.createdAt ?? left.opened_at ?? 0).getTime()
+                const rightTime = new Date(right.createdAt ?? right.opened_at ?? 0).getTime()
+                return rightTime - leftTime
+            })[0]
         // Check if a table is selected
         if (!currentTable) {
             toast.error("Vui lòng chọn bàn trước khi chọn món ăn")
@@ -115,12 +119,7 @@ const HeaderSearch = ({ page, breadcrumbList }: HeaderSearch) => {
 
         // Check if the current table is available for use
         if (currentTableRecord.table_status === "Empty") {
-            const sessionStartedAt =
-                currentTableRecord.occupied_since ??
-                tableSessionStartRef.current[currentTableRecord.documentId] ??
-                new Date().toISOString()
-
-            tableSessionStartRef.current[currentTableRecord.documentId] = sessionStartedAt
+            const sessionStartedAt = new Date().toISOString()
 
             // Update the table status to "In Use"
             updateTableStatus({
@@ -132,7 +131,7 @@ const HeaderSearch = ({ page, breadcrumbList }: HeaderSearch) => {
         }
 
         //Check if the current table has an order or not
-        if (!currentOrder || isOrderClosed(currentOrder.order_status)) {
+        if (!currentOrder) {
             // If no order exists, create a new order
             createOrder(
                 {
@@ -165,6 +164,12 @@ const HeaderSearch = ({ page, breadcrumbList }: HeaderSearch) => {
             let currentOrderItem = {} as OrderItem;
 
             for (let i = 0; i < orderItemsByTable.length; i++) {
+                const itemOrderId =
+                    typeof orderItemsByTable[i].order_id === "string"
+                        ? orderItemsByTable[i].order_id
+                        : orderItemsByTable[i].order_id?.documentId
+                if (itemOrderId !== currentOrder.documentId) continue
+
                 const orderItemDishId =
                     typeof orderItemsByTable[i].dish_id === 'string'
                         ? orderItemsByTable[i].dish_id
