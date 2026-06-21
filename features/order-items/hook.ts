@@ -13,7 +13,7 @@ export const useGetOrderItemsWithTable = (table_number?: string) => {
     }
 
     return useQuery({
-        queryKey: ['order-items-with-table',filters],
+        queryKey: ['order-items-with-table', table_number, filters],
         queryFn: () => getOrderItemsByTable(filters),
         enabled: !!table_number
     })

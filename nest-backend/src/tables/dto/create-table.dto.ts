@@ -50,9 +50,9 @@ export class CreateTableDto {
 
   @IsOptional()
   @IsDateString()
-  occupiedSince?: string;
+  occupiedSince?: string | null;
 
   @IsOptional()
   @IsDateString()
-  lastClearedAt?: string;
+  lastClearedAt?: string | null;
 }
