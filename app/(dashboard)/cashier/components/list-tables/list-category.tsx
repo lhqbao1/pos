@@ -2,7 +2,10 @@
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGetAllCategories } from "@/features/categories/hook";
-import { useGetDishesByCategory } from "@/features/dish/hook";
+import {
+  useDishesQuery,
+  useGetDishesByCategory,
+} from "@/features/dish/hook";
 import React, { useState } from "react";
 import {
   Card,
@@ -38,8 +41,13 @@ import {
 import { OrderItem } from "@/features/order-items/type";
 import { resolveMediaUrl } from "@/lib/media-url";
 
+const UNCATEGORIZED_CATEGORY_KEY = "__frontend_uncategorized__";
+const UNCATEGORIZED_CATEGORY_NAME = "Chưa phân loại";
+
 const ListCategory = () => {
   const [selectedCategory, setSelectedCategory] = useState("");
+  const isUncategorizedSelected =
+    selectedCategory === UNCATEGORIZED_CATEGORY_KEY;
   const [currentTable] = useAtom(tableNumberAtom);
 
   // Fetch categories
@@ -51,6 +59,19 @@ const ListCategory = () => {
     refetch: refetchCategories,
   } = useGetAllCategories();
 
+  const {
+    data: allDishesData,
+    isInitialLoading: isAllDishesInitialLoading,
+    isFetching: isAllDishesFetching,
+    isError: allDishesError,
+    refetch: refetchAllDishes,
+  } = useDishesQuery({ pageSize: 10000 });
+
+  const uncategorizedDishes: Dish[] = (allDishesData?.data ?? []).filter(
+    (dish: Dish) =>
+      !dish.category || (!dish.category.id && !dish.category.documentId),
+  );
+
   // Fetch dishes by selected category
   const {
     data: dishesData,
@@ -58,7 +79,13 @@ const ListCategory = () => {
     isFetching: isDishesFetching,
     isError: dishesError,
     refetch: refetchDishes,
-  } = useGetDishesByCategory(selectedCategory);
+  } = useGetDishesByCategory(
+    isUncategorizedSelected ? undefined : selectedCategory,
+  );
+
+  const visibleDishes: Dish[] = isUncategorizedSelected
+    ? uncategorizedDishes
+    : (dishesData?.data ?? []);
 
   // Fetch current table data
   const { data: currentTableData } = useGetTableByTableNumber(currentTable);
@@ -129,17 +156,21 @@ const ListCategory = () => {
 
   if (
     (isInitialLoading && !data) ||
-    (isCategoriesFetching && !selectedCategory)
+    (isAllDishesInitialLoading && !allDishesData) ||
+    ((isCategoriesFetching || isAllDishesFetching) && !selectedCategory)
   )
     return categorySkeleton;
-  if (isError) {
+  if (isError || allDishesError) {
     return (
       <div className="flex flex-col gap-3">
         <p className="text-sm text-red-500 font-medium">
           Không tải được danh mục.
         </p>
         <Button
-          onClick={() => refetchCategories()}
+          onClick={() => {
+            refetchCategories();
+            refetchAllDishes();
+          }}
           className="bg-secondary text-white hover:bg-secondary/90 hover:text-white"
         >
           Tải lại danh mục
@@ -331,10 +362,20 @@ const ListCategory = () => {
   };
 
   if (selectedCategory) {
-    if ((isDishesInitialLoading && !dishesData) || isDishesFetching)
+    const isSelectedDishesLoading = isUncategorizedSelected
+      ? (isAllDishesInitialLoading && !allDishesData) || isAllDishesFetching
+      : (isDishesInitialLoading && !dishesData) || isDishesFetching;
+    const hasSelectedDishesError = isUncategorizedSelected
+      ? allDishesError
+      : dishesError;
+    const refetchSelectedDishes = isUncategorizedSelected
+      ? refetchAllDishes
+      : refetchDishes;
+
+    if (isSelectedDishesLoading)
       return dishSkeleton;
 
-    if (dishesError) {
+    if (hasSelectedDishesError) {
       return (
         <div className="pt-2 flex flex-col gap-3">
           <Button
@@ -350,7 +391,7 @@ const ListCategory = () => {
             Không tải được danh sách món ăn.
           </p>
           <Button
-            onClick={() => refetchDishes()}
+            onClick={() => refetchSelectedDishes()}
             className="bg-secondary text-white hover:bg-secondary/90 hover:text-white w-fit"
           >
             Tải lại món ăn
@@ -359,7 +400,7 @@ const ListCategory = () => {
       );
     }
 
-    if (!dishesData?.data?.length) {
+    if (!visibleDishes.length) {
       return (
         <div className="pt-2 space-y-4">
           <Button
@@ -412,7 +453,7 @@ const ListCategory = () => {
                     type="button"
                     variant="outline"
                     className="border-[#e4d1ba] bg-white text-[#6f4b2a] hover:bg-[#fff5e9] hover:text-[#5d3e24]"
-                    onClick={() => refetchDishes()}
+                    onClick={() => refetchSelectedDishes()}
                   >
                     <RefreshCcw className="mr-2 h-4 w-4" />
                     Tải lại danh mục
@@ -437,7 +478,7 @@ const ListCategory = () => {
           Quay lại danh mục
         </Button>
         <div className="mt-3 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-          {dishesData.data.map((dish: Dish, index: number) => {
+          {visibleDishes.map((dish: Dish, index: number) => {
             const imageUrl =
               resolveMediaUrl(dish?.image?.url) ||
               "/category-food-placeholder.svg";
@@ -462,7 +503,7 @@ const ListCategory = () => {
                     {dish.name}
                   </CardTitle>
                   <p className="line-clamp-1 text-xs text-[#8b6a49]">
-                    {dish.category?.name ?? "Món ăn"}
+                    {dish.category?.name ?? UNCATEGORIZED_CATEGORY_NAME}
                   </p>
                 </CardHeader>
                 <CardFooter className="px-3 pb-4 pt-0">
@@ -505,6 +546,28 @@ const ListCategory = () => {
           </Card>
         );
       })}
+      {uncategorizedDishes.length > 0 ? (
+        <Card
+          key={UNCATEGORIZED_CATEGORY_KEY}
+          onClick={() =>
+            handleClickCategoryCard(UNCATEGORIZED_CATEGORY_KEY)
+          }
+          className="cursor-pointer gap-2 pb-0 pt-3 transition-transform duration-400 hover:scale-105 hover:shadow-lg"
+        >
+          <CardHeader className="py-0 text-center uppercase font-semibold">
+            {UNCATEGORIZED_CATEGORY_NAME}
+          </CardHeader>
+          <CardContent className="p-0">
+            <Image
+              src="/category-food-placeholder.svg"
+              width={200}
+              height={200}
+              alt={UNCATEGORIZED_CATEGORY_NAME}
+              className="h-[150px] w-full rounded-bl-xl rounded-br-xl object-cover"
+            />
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 };
