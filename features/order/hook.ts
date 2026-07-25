@@ -41,8 +41,10 @@ export const useCreateOrder = () => {
     return useMutation({
         mutationFn: createOrder,
         onSuccess: async () => {
-            queryClient.invalidateQueries(['order-table']);
-            console.log("Order created successfully");
+            await queryClient.invalidateQueries({ queryKey: ['order-table'] });
+            await queryClient.invalidateQueries({ queryKey: ['orders'] });
+            await queryClient.refetchQueries({ queryKey: ['order-table'], type: 'active' });
+            await queryClient.refetchQueries({ queryKey: ['orders'], type: 'active' });
         }
     });
 };
@@ -78,9 +80,11 @@ export const useUpdateOrderStatus = () => {
         }) => {
             return updateOrderStatus(id, order_status, is_paid, paid_time, total_amount, paid_amount, change_amount);
         },
-        onSuccess: () => {
-            queryClient.invalidateQueries(['order-table']);
-            queryClient.invalidateQueries(['orders']);
+        onSuccess: async () => {
+            await queryClient.invalidateQueries({ queryKey: ['order-table'] });
+            await queryClient.invalidateQueries({ queryKey: ['orders'] });
+            await queryClient.refetchQueries({ queryKey: ['order-table'], type: 'active' });
+            await queryClient.refetchQueries({ queryKey: ['orders'], type: 'active' });
         }
     });
 }
@@ -101,9 +105,11 @@ export const useUpdateOrderCustomerName = () => {
             }
             return patchOrderCustomerName(id, customer_name);
         },
-        onSuccess: () => {
-            queryClient.invalidateQueries(['order-table']);
-            queryClient.invalidateQueries(['orders']);
+        onSuccess: async () => {
+            await queryClient.invalidateQueries({ queryKey: ['order-table'] });
+            await queryClient.invalidateQueries({ queryKey: ['orders'] });
+            await queryClient.refetchQueries({ queryKey: ['order-table'], type: 'active' });
+            await queryClient.refetchQueries({ queryKey: ['orders'], type: 'active' });
         }
     });
 }

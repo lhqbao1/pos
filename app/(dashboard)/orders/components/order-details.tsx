@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import Image from 'next/image'
 import {
     ArrowLeft,
@@ -240,8 +240,23 @@ const renderReceiptHtml = (snapshot: ReceiptSnapshot) => {
       }
       td.center, th.center { text-align: center; }
       td.right, th.right { text-align: right; }
-      .name { font-weight: 600; }
-      .price { font-size: 13px; color: #525252; }
+      tbody td {
+        font-size: 17px;
+        font-weight: 800;
+        line-height: 1.14;
+      }
+      .name {
+        font-size: 17px;
+        font-weight: 800;
+        line-height: 1.14;
+      }
+      .price {
+        margin-top: 1px;
+        font-size: 17px;
+        font-weight: 800;
+        line-height: 1.12;
+        color: #0f172a;
+      }
       .summary {
         margin-top: 6px;
       }
@@ -250,6 +265,10 @@ const renderReceiptHtml = (snapshot: ReceiptSnapshot) => {
         justify-content: space-between;
         gap: 10px;
         margin: 1px 0;
+      }
+      .summary .grand-total {
+        font-size: 18px;
+        font-weight: 800;
       }
       .thanks {
         margin-top: 10px;
@@ -302,7 +321,7 @@ const renderReceiptHtml = (snapshot: ReceiptSnapshot) => {
       </table>
 
       <div class="summary">
-        <p><span>Tổng cộng:</span><strong>${formatReceiptMoney(snapshot.grandTotal)}</strong></p>
+        <p class="grand-total"><span>Tổng cộng:</span><strong>${formatReceiptMoney(snapshot.grandTotal)}</strong></p>
         <p><span>Tiền khách đưa:</span><strong>${formatReceiptMoney(snapshot.paidAmount)}</strong></p>
         ${statusSummaryHtml}
       </div>
@@ -353,6 +372,8 @@ const OrderDetails = ({ order }: { order: Order }) => {
     const [pendingSelections, setPendingSelections] = useState<Record<string, PendingDishSelection>>({})
     const [isSavingAddedItems, setIsSavingAddedItems] = useState(false)
     const [isProcessingCheckout, setIsProcessingCheckout] = useState(false)
+    const isCheckoutSubmittingRef = useRef(false)
+    const isPrintingReceiptRef = useRef(false)
     const [isSavingCustomerName, setIsSavingCustomerName] = useState(false)
     const [customerNameInput, setCustomerNameInput] = useState(order.customer_name ?? '')
     const [paidAmountInput, setPaidAmountInput] = useState('')
@@ -605,6 +626,9 @@ const OrderDetails = ({ order }: { order: Order }) => {
     }
 
     const openPrintWindowWithSnapshot = async (snapshot: ReceiptSnapshot) => {
+        if (isPrintingReceiptRef.current) return
+
+        isPrintingReceiptRef.current = true
         let printWindow: Window | null = null
 
         try {
@@ -645,6 +669,10 @@ const OrderDetails = ({ order }: { order: Order }) => {
                 printWindow.close()
             }
             throw error
+        } finally {
+            window.setTimeout(() => {
+                isPrintingReceiptRef.current = false
+            }, 1000)
         }
     }
 
@@ -688,6 +716,8 @@ const OrderDetails = ({ order }: { order: Order }) => {
     }: {
         forceOutstanding?: boolean
     } = {}) => {
+        if (isCheckoutSubmittingRef.current) return
+
         if (!orderId) {
             toast.error('Không tìm thấy mã hóa đơn để chốt thanh toán.')
             return
@@ -698,6 +728,7 @@ const OrderDetails = ({ order }: { order: Order }) => {
             return
         }
 
+        isCheckoutSubmittingRef.current = true
         setIsProcessingCheckout(true)
 
         const orderTotal = data.reduce(
@@ -789,6 +820,7 @@ const OrderDetails = ({ order }: { order: Order }) => {
             })
         } finally {
             setIsProcessingCheckout(false)
+            isCheckoutSubmittingRef.current = false
         }
     }
 

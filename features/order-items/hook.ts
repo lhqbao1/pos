@@ -39,8 +39,11 @@ export const useCreateOrderItem = () => {
             kitchen_status: data.kitchen_status ?? 'pending',
         })
        },
-       onSuccess: () => {
-        queryClient.invalidateQueries(['order-items-with-table'])
+       onSuccess: async () => {
+        await queryClient.invalidateQueries({ queryKey: ['order-items-with-table'] })
+        await queryClient.invalidateQueries({ queryKey: ['order-items-by-order-id'] })
+        await queryClient.refetchQueries({ queryKey: ['order-items-with-table'], type: 'active' })
+        await queryClient.refetchQueries({ queryKey: ['order-items-by-order-id'], type: 'active' })
        }
     })
 }
@@ -52,8 +55,11 @@ export const useUpdateOrderItemQuantity = () => {
         mutationFn: ({id, quantity}: {id: string, quantity: number}) => {
             return updateOrderItemQuantity(id, quantity)
         },
-        onSuccess: () => {
-            queryClient.invalidateQueries(['order-items-with-table'])
+        onSuccess: async () => {
+            await queryClient.invalidateQueries({ queryKey: ['order-items-with-table'] })
+            await queryClient.invalidateQueries({ queryKey: ['order-items-by-order-id'] })
+            await queryClient.refetchQueries({ queryKey: ['order-items-with-table'], type: 'active' })
+            await queryClient.refetchQueries({ queryKey: ['order-items-by-order-id'], type: 'active' })
         }
     })
 }
@@ -65,8 +71,11 @@ export const useDeleteOrderItem = () => {
         mutationFn: (id: string) => {
             return deleteOrderItem(id)
         },
-        onSuccess: () => {
-            queryClient.invalidateQueries(['order-items-with-table'])
+        onSuccess: async () => {
+            await queryClient.invalidateQueries({ queryKey: ['order-items-with-table'] })
+            await queryClient.invalidateQueries({ queryKey: ['order-items-by-order-id'] })
+            await queryClient.refetchQueries({ queryKey: ['order-items-with-table'], type: 'active' })
+            await queryClient.refetchQueries({ queryKey: ['order-items-by-order-id'], type: 'active' })
         }
     })
 }

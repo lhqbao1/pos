@@ -301,6 +301,8 @@ const ListMealsTable = () => {
     Record<string, ReturnType<typeof setTimeout>>
   >({});
   const latestQuantityRef = useRef<Record<string, number>>({});
+  const isCheckoutSubmittingRef = useRef(false);
+  const isPrintingReceiptRef = useRef(false);
   const {
     data: listOrderItems,
     isInitialLoading: isOrderItemsInitialLoading,
@@ -706,14 +708,23 @@ const ListMealsTable = () => {
   };
 
   const printReceipt = async (snapshot: ReceiptSnapshot) => {
-    setReceiptSnapshot(snapshot);
-    await new Promise<void>((resolve) => {
-      window.requestAnimationFrame(() => resolve());
-    });
-    await new Promise<void>((resolve) => {
-      window.setTimeout(() => resolve(), 100);
-    });
-    window.print();
+    if (isPrintingReceiptRef.current) return;
+
+    isPrintingReceiptRef.current = true;
+    try {
+      setReceiptSnapshot(snapshot);
+      await new Promise<void>((resolve) => {
+        window.requestAnimationFrame(() => resolve());
+      });
+      await new Promise<void>((resolve) => {
+        window.setTimeout(() => resolve(), 100);
+      });
+      window.print();
+    } finally {
+      window.setTimeout(() => {
+        isPrintingReceiptRef.current = false;
+      }, 1000);
+    }
   };
 
   useEffect(() => {
@@ -815,6 +826,8 @@ const ListMealsTable = () => {
   }: {
     forceOutstanding?: boolean;
   } = {}) => {
+    if (isCheckoutSubmittingRef.current) return;
+
     if (!currentOrderRecord || !currentTableId) {
       toast.error("Không tìm thấy thông tin đơn/bàn để thanh toán.");
       return;
@@ -825,6 +838,7 @@ const ListMealsTable = () => {
       return;
     }
 
+    isCheckoutSubmittingRef.current = true;
     setIsProcessingPayment(true);
 
     const orderTotal = displayedOrderItems.reduce(
@@ -917,6 +931,7 @@ const ListMealsTable = () => {
       });
     } finally {
       setIsProcessingPayment(false);
+      isCheckoutSubmittingRef.current = false;
     }
   };
 
@@ -1782,15 +1797,25 @@ const ListMealsTable = () => {
 
         .pos-print-item-name {
           display: block;
-          font-weight: 600;
+          font-size: 17px;
+          font-weight: 800;
+          line-height: 1.14;
           text-transform: uppercase;
         }
 
         .pos-print-item-price {
           display: block;
           margin-top: 1px;
-          font-size: 13px;
-          font-weight: 400;
+          font-size: 17px;
+          font-weight: 800;
+          line-height: 1.12;
+        }
+
+        .pos-print-table tbody .qty-col,
+        .pos-print-table tbody .total-col {
+          font-size: 17px;
+          font-weight: 800;
+          line-height: 1.14;
         }
 
         .pos-print-summary {
@@ -1807,7 +1832,8 @@ const ListMealsTable = () => {
         }
 
         .pos-print-summary .grand-total {
-          font-size: 16px;
+          font-size: 18px;
+          font-weight: 800;
         }
 
         .pos-print-words {

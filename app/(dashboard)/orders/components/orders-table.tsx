@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useMemo, useState } from 'react'
+import React, { useCallback, useMemo, useRef, useState } from 'react'
 import {
     ColumnDef,
     flexRender,
@@ -188,8 +188,23 @@ const renderReceiptHtml = (snapshot: ReceiptSnapshot) => {
       }
       td.center, th.center { text-align: center; }
       td.right, th.right { text-align: right; }
-      .name { font-weight: 600; }
-      .price { font-size: 13px; color: #525252; }
+      tbody td {
+        font-size: 17px;
+        font-weight: 800;
+        line-height: 1.14;
+      }
+      .name {
+        font-size: 17px;
+        font-weight: 800;
+        line-height: 1.14;
+      }
+      .price {
+        margin-top: 1px;
+        font-size: 17px;
+        font-weight: 800;
+        line-height: 1.12;
+        color: #0f172a;
+      }
       .summary {
         margin-top: 6px;
       }
@@ -198,6 +213,10 @@ const renderReceiptHtml = (snapshot: ReceiptSnapshot) => {
         justify-content: space-between;
         gap: 10px;
         margin: 1px 0;
+      }
+      .summary .grand-total {
+        font-size: 18px;
+        font-weight: 800;
       }
       .thanks {
         margin-top: 10px;
@@ -250,7 +269,7 @@ const renderReceiptHtml = (snapshot: ReceiptSnapshot) => {
       </table>
 
       <div class="summary">
-        <p><span>Tổng cộng:</span><strong>${formatReceiptMoney(snapshot.grandTotal)}</strong></p>
+        <p class="grand-total"><span>Tổng cộng:</span><strong>${formatReceiptMoney(snapshot.grandTotal)}</strong></p>
         <p><span>Tiền khách đưa:</span><strong>${formatReceiptMoney(snapshot.paidAmount)}</strong></p>
         ${statusSummaryHtml}
       </div>
@@ -290,6 +309,7 @@ const OrdersTable = () => {
     const [endDateFilter] = useAtom(endDateFilterAtom)
     const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null)
     const [printingOrderId, setPrintingOrderId] = useState<string | null>(null)
+    const printingOrderIdRef = useRef<string | null>(null)
     const [pendingStatusChange, setPendingStatusChange] = useState<PendingStatusChange | null>(null)
     const [changingStatusOrderId, setChangingStatusOrderId] = useState<string | null>(null)
     const { mutateAsync: updateOrderStatus } = useUpdateOrderStatus()
@@ -394,6 +414,8 @@ const OrdersTable = () => {
             return
         }
 
+        if (printingOrderIdRef.current) return
+        printingOrderIdRef.current = orderId
         setPrintingOrderId(orderId)
         let printWindow: Window | null = null
 
@@ -498,6 +520,7 @@ const OrdersTable = () => {
                 printWindow.close()
             }
         } finally {
+            printingOrderIdRef.current = null
             setPrintingOrderId(null)
         }
     }, [])
